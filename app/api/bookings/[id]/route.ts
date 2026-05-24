@@ -54,7 +54,17 @@ export async function DELETE(
         if (!existing || existing.userId !== session.user.id)
             return NextResponse.json({ error: "Booking not found or forbidden" }, { status: 403 })
 
-        await prisma.transaction.delete({ where: { id: bookingId } })
+        if (!["PENDING", "CONFIRMED"].includes(existing.status)) {
+            return NextResponse.json(
+                { error: "Only pending or confirmed bookings can be cancelled" },
+                { status: 409 }
+            )
+        }
+
+        await prisma.transaction.update({
+            where: { id: bookingId },
+            data:  { status: "CANCELLED" },
+        })
 
         return NextResponse.json({ success: true })
     } catch (error) {
@@ -79,7 +89,7 @@ export async function PUT(
 
     const start = new Date(startDate)
     const end = new Date(endDate)
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end)
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end)
         return NextResponse.json({ error: "Invalid rental period" }, { status: 400 })
 
     try {
@@ -91,7 +101,6 @@ export async function PUT(
         if (!existing || existing.userId !== session.user.id)
             return NextResponse.json({ error: "Booking not found or forbidden" }, { status: 403 })
 
-        // Ellenőrizzük az overbooking-et update közben
         const overlapping = await prisma.transaction.findMany({
             where: {
                 productId: existing.productId,
@@ -106,7 +115,7 @@ export async function PUT(
         if (overlapping.length > 0)
             return NextResponse.json({ error: "Car already booked for this period" }, { status: 409 })
 
-        const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+        const totalDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
         const totalPrice = totalDays * existing.product.pricePerDay
         const deposit = existing.product.deposit ?? totalPrice * 0.2
 

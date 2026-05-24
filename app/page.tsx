@@ -2,427 +2,513 @@ import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import FeaturedCarsGrid from "@/components/FeaturedCarsGrid"
+import HeroSearch from "@/components/HeroSearch"
+import { Car } from "@/types/types"
+
+// ─── Hero image (replace with your own in /public/hero-car.jpg) ───────────
+const HERO_IMAGE = "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1920&q=80"
+
+// ─── Luxury brands scrolling strip ────────────────────────────────────────
+const BRANDS = [
+    "ROLLS-ROYCE", "LAMBORGHINI", "FERRARI", "BENTLEY", "PORSCHE",
+    "McLAREN", "ASTON MARTIN", "BUGATTI", "MASERATI", "LEXUS",
+    "MERCEDES-BENZ", "BMW", "AUDI", "JAGUAR", "LOTUS",
+]
+
+// ─── Loyalty tiers ────────────────────────────────────────────────────────
+const TIERS = [
+    {
+        name: "New Driver",
+        xp: "0+",
+        icon: "🏁",
+        color: "#5A5A6A",
+        border: "rgba(90,90,106,0.3)",
+        benefits: ["Full fleet access", "Standard support"],
+    },
+    {
+        name: "Road Explorer",
+        xp: "200+",
+        icon: "🗺️",
+        color: "#A8A9AD",
+        border: "rgba(168,169,173,0.35)",
+        benefits: ["5% rental discount", "Early availability alerts"],
+    },
+    {
+        name: "Elite Driver",
+        xp: "500+",
+        icon: "⭐",
+        color: "#C9A84C",
+        border: "rgba(201,168,76,0.4)",
+        benefits: ["10% rental discount", "Free category upgrade"],
+    },
+    {
+        name: "VIP Member",
+        xp: "1,000+",
+        icon: "💎",
+        color: "#3498DB",
+        border: "rgba(52,152,219,0.4)",
+        benefits: ["15% rental discount", "1 experience drive / year"],
+    },
+    {
+        name: "Dubai Legend",
+        xp: "2,000+",
+        icon: "👑",
+        color: "#9B59B6",
+        border: "rgba(155,89,182,0.4)",
+        benefits: ["20% rental discount", "Personal concierge"],
+    },
+]
+
+// ─── How it works steps ────────────────────────────────────────────────────
+const STEPS = [
+    {
+        number: "01",
+        icon: "🔍",
+        title: "Browse & Choose",
+        desc: "Explore our curated fleet of luxury and performance vehicles, filtered by location, date and category.",
+    },
+    {
+        number: "02",
+        icon: "📅",
+        title: "Book Instantly",
+        desc: "Select your dates, review the pricing, and confirm your reservation in under 60 seconds.",
+    },
+    {
+        number: "03",
+        icon: "⭐",
+        title: "Drive & Earn",
+        desc: "Complete your rental to earn XP. Level up, unlock badges, and claim exclusive member benefits.",
+    },
+]
+
+// ─── Trust stats ────────────────────────────────────────────────────────────
+const STATS = [
+    { value: "500+", label: "Happy Drivers" },
+    { value: "120+", label: "Premium Vehicles" },
+    { value: "4.9★", label: "Average Rating" },
+]
 
 export default async function LandingPage() {
-
-  const session = await getServerSession(authOptions)
-  const user = session?.user
-
-  const featuredCars = await prisma.product.findMany({
-    where: { featured: true },
-    take: 3
-  })
-
-  return (
-    <div className="min-h-screen bg-white text-gray-900 overflow-hidden">
-
-
-      {/* HERO */}
-      <section className="relative min-h-[85svh] flex items-center justify-center text-white overflow-hidden">
-
-        {/* Background Image */}
-        <img
-          src="/hero-car.jpg"
-          alt="Luxury car"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/60" />
-
-        {/* Subtle glow */}
-        <div className="absolute top-1/2 left-1/2 w-150 h-150 bg-blue-500/20 blur-3xl -translate-x-1/2 -translate-y-1/2 z-0" />
-
-        <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
-
-          {/* Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-            Drive Your
-            <span className="text-blue-400"> Dream Car</span>
-          </h1>
-
-          {/* Subtext */}
-          <p className="mt-6 text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
-            Discover luxury vehicles, book instantly, and experience driving
-            like never before.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-
-            <Link
-              href="/cars"
-              className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-full text-lg font-semibold shadow-2xl transition"
-            >
-              Browse Cars
-            </Link>
-
-            <Link
-              href="/login"
-              className="border border-white/40 hover:bg-white/10 px-8 py-4 rounded-full text-lg transition"
-            >
-              Sign In
-            </Link>
-
-          </div>
-
-          {/* Booking bar */}
-          <div className="mt-16 mx-auto max-w-4xl bg-white/95 md:bg-white/90 rounded-2xl p-4 md:p-6 shadow-2xl text-gray-600">
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-              <input
-                type="text"
-                placeholder="Pickup Location"
-                className="px-4 py-3 rounded-lg border border-gray-200 focus:outline-none"
-              />
-
-              <input
-                type="date"
-                className="px-4 py-3 rounded-lg border border-gray-200 focus:outline-none"
-              />
-
-              <input
-                type="date"
-                className="px-4 py-3 rounded-lg border border-gray-200 focus:outline-none"
-              />
-
-              <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
-                Find Cars
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* Trust stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16 max-w-xl mx-auto text-white">
-
-            <div>
-              <p className="text-3xl font-bold">500+</p>
-              <p className="text-white/70">Happy Drivers</p>
-            </div>
-
-            <div>
-              <p className="text-3xl font-bold">120+</p>
-              <p className="text-white/70">Premium Cars</p>
-            </div>
-
-            <div>
-              <p className="text-3xl font-bold">4.9★</p>
-              <p className="text-white/70">Customer Rating</p>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* FEATURES */}
-      <section className="max-w-7xl mx-auto px-6 py-28">
-
-        <div className="grid md:grid-cols-3 gap-10">
-
-          <div className="group bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition border">
-
-            <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-blue-100 text-2xl mb-6 group-hover:scale-110 transition">
-              ⚡
-            </div>
-
-            <h3 className="text-xl font-semibold mb-3">
-              Instant Booking
-            </h3>
-
-            <p className="text-gray-600">
-              Reserve your car in seconds with our seamless booking system.
-            </p>
-
-          </div>
-
-
-          <div className="group bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition border">
-
-            <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-blue-100 text-2xl mb-6 group-hover:scale-110 transition">
-              🚗
-            </div>
-
-            <h3 className="text-xl font-semibold mb-3">
-              Premium Vehicles
-            </h3>
-
-            <p className="text-gray-600">
-              Choose from sport, luxury, and performance cars.
-            </p>
-
-          </div>
-
-
-          <div className="group bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition border">
-
-            <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-blue-100 text-2xl mb-6 group-hover:scale-110 transition">
-              🏆
-            </div>
-
-            <h3 className="text-xl font-semibold mb-3">
-              XP Rewards
-            </h3>
-
-            <p className="text-gray-600">
-              Earn XP and unlock exclusive rewards every time you drive.
-            </p>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* FEATURED CARS */}
-      <section className="py-28 bg-gray-50">
-
-        <div className="max-w-7xl mx-auto px-6">
-
-          {/* Section header */}
-          <div className="text-center mb-16">
-
-            <p className="text-blue-600 font-semibold mb-3">
-              Premium Selection
-            </p>
-
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Featured Cars
-            </h2>
-
-            <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
-              Handpicked luxury and performance vehicles ready for your next ride.
-            </p>
-
-          </div>
-
-
-          {/* Cars grid */}
-          <div className="grid md:grid-cols-3 gap-10">
-
-            {featuredCars.map((car) => (
-
-              <div
-                key={car.id}
-                className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300"
-              >
-
-                {/* Image */}
-                <div className="relative overflow-hidden">
-
-                  <img
-                    src={car.image}
-                    alt={car.name}
-                    className="h-60 w-full object-cover group-hover:scale-110 transition duration-500"
-                  />
-
-                  {/* Price badge */}
-                  <div className="absolute top-4 left-4 bg-white px-4 py-1.5 rounded-full text-sm font-semibold shadow">
-                    €{car.pricePerDay}/day
-                  </div>
-
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+    const session = await getServerSession(authOptions)
+
+    const featuredCarsRaw = await prisma.product.findMany({
+        where: { featured: true },
+        take: 3,
+        include: { images: true },
+    })
+
+    const featuredCars: Car[] = featuredCarsRaw.map(c => ({
+        id: c.id,
+        name: c.name,
+        brand: c.brand,
+        model: c.model,
+        year: c.year,
+        category: c.category,
+        transmission: c.transmission,
+        fuelType: c.fuelType,
+        seats: c.seats,
+        mileage: c.mileage,
+        licensePlate: c.licensePlate,
+        location: c.location,
+        pricePerDay: c.pricePerDay,
+        deposit: c.deposit ?? undefined,
+        rating: c.rating ?? 0,
+        reviewCount: c.reviewCount ?? 0,
+        images: c.images.map(img => ({ id: img.id, productId: img.productId, url: img.url })),
+    }))
+
+    return (
+        <div className="bg-dark text-white-soft overflow-x-hidden">
+
+
+            {/* ══════════════════════════════════════
+                HERO
+            ══════════════════════════════════════ */}
+            <section className="-mt-18 relative min-h-screen flex flex-col items-center justify-center text-white overflow-hidden">
+
+                {/* Background image */}
+                <img
+                    src={HERO_IMAGE}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+
+                {/* Dark base overlay */}
+                <div className="absolute inset-0 bg-dark/65" />
+
+                {/* Gradient: bottom darkens toward page */}
+                <div className="absolute inset-0 bg-linear-to-t from-dark via-dark/30 to-transparent" />
+
+                {/* Gradient: left column for readability */}
+                <div className="absolute inset-0 bg-linear-to-r from-dark/70 via-dark/20 to-transparent" />
+
+                {/* Subtle gold glow behind headline */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-150 bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
+
+                {/* Content */}
+                <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-32 pb-24 flex flex-col items-center text-center">
+
+                    {/* Eyebrow */}
+                    <p className="text-gold font-stats text-xs tracking-[0.3em] uppercase mb-6 animate-fade-in-up">
+                        Premium Car Rental
+                    </p>
+
+                    {/* Headline */}
+                    <h1 className="font-heading font-light text-6xl sm:text-7xl md:text-[5.5rem] lg:text-[7rem] leading-[0.92] tracking-tight mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+                        Drive the
+                        <br />
+                        <span className="text-gradient-gold italic font-normal">
+                            Extraordinary
+                        </span>
+                    </h1>
+
+                    {/* Subtext */}
+                    <p className="text-white/65 font-body text-base md:text-lg max-w-xl mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+                        Discover our exclusive fleet of luxury and performance vehicles.
+                        Every rental earns you XP towards elite rewards.
+                    </p>
+
+                    {/* Search bar */}
+                    <div className="w-full flex justify-center animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+                        <HeroSearch />
+                    </div>
+
+                    {/* Trust stats */}
+                    <div className="mt-16 flex flex-col sm:flex-row items-center gap-8 sm:gap-16 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+                        {STATS.map(s => (
+                            <div key={s.label} className="text-center">
+                                <p className="font-stats text-3xl font-bold text-white-soft">{s.value}</p>
+                                <p className="font-body text-sm text-white/50 mt-1">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
 
                 </div>
 
-
-                {/* Card content */}
-                <div className="p-6">
-
-                  <h3 className="text-xl font-semibold mb-1">
-                    {car.brand} {car.name}
-                  </h3>
-
-                  <p className="text-gray-500 text-sm mb-6">
-                    Premium performance vehicle
-                  </p>
-
-
-                  <div className="flex items-center justify-between">
-
-                    <Link
-                      href={`/cars/${car.id}`}
-                      className="text-blue-600 font-semibold hover:underline"
-                    >
-                      View Details →
-                    </Link>
-
-                    <Link
-                      href={`/cars/${car.id}`}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                    >
-                      Rent
-                    </Link>
-
-                  </div>
-
+                {/* Scroll indicator */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
+                    <span className="font-stats text-[10px] tracking-[0.2em] uppercase text-white">Scroll</span>
+                    <div className="w-px h-8 bg-white/50" />
                 </div>
 
-              </div>
-
-            ))}
-
-          </div>
+            </section>
 
 
-          {/* Explore all cars */}
-          <div className="text-center mt-16">
-
-            <Link
-              href="/cars"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-lg transition"
-            >
-              Browse All Cars
-            </Link>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* XP & BADGE SYSTEM */}
-      <section className="py-32 bg-white">
-
-        <div className="max-w-6xl mx-auto px-6 text-center">
-
-          <p className="text-blue-600 font-semibold mb-3">
-            Gamified Driving
-          </p>
-
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Level Up While Driving
-          </h2>
-
-          <p className="text-gray-600 text-lg mb-16 max-w-2xl mx-auto">
-            Every rental earns you XP. Unlock achievements, increase your driver
-            level and gain access to exclusive discounts and premium vehicles.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-10">
-
-
-            {/* XP PROGRESS CARD */}
-            <div className="bg-gray-50 rounded-3xl p-10 shadow-lg hover:shadow-xl transition text-left">
-
-              <p className="text-sm text-gray-500 mb-2">
-                Driver Level
-              </p>
-
-              <p className="text-2xl font-semibold mb-6">
-                Level 3 Driver
-              </p>
-
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div className="bg-blue-600 h-3 w-2/3 rounded-full" />
-              </div>
-
-              <p className="text-sm text-gray-500 mt-3">
-                220 / 300 XP
-              </p>
-
-              <p className="text-gray-600 mt-6 text-sm">
-                Complete rentals to gain XP and reach the next level.
-              </p>
-
+            {/* ══════════════════════════════════════
+                BRANDS MARQUEE
+            ══════════════════════════════════════ */}
+            <div className="border-y border-surface-3 bg-surface py-4 overflow-hidden">
+                <div className="flex animate-marquee whitespace-nowrap">
+                    {[...BRANDS, ...BRANDS].map((brand, i) => (
+                        <span
+                            key={i}
+                            className="mx-8 font-stats text-[11px] tracking-[0.25em] text-muted-2 uppercase"
+                        >
+                            {brand}
+                            <span className="ml-8 text-surface-3">◆</span>
+                        </span>
+                    ))}
+                </div>
             </div>
 
 
-            {/* BADGES CARD */}
-            <div className="bg-gray-50 rounded-3xl p-10 shadow-lg hover:shadow-xl transition">
+            {/* ══════════════════════════════════════
+                FEATURED VEHICLES
+            ══════════════════════════════════════ */}
+            <section className="py-28 max-w-7xl mx-auto px-6">
 
-              <p className="text-sm text-gray-500 mb-6">
-                Unlock Badges
-              </p>
+                <div className="text-center mb-16">
+                    <p className="text-gold font-stats text-xs tracking-[0.3em] uppercase mb-4">
+                        Handpicked for you
+                    </p>
+                    <h2 className="font-heading text-5xl md:text-6xl font-light text-white-soft mb-4">
+                        Featured Vehicles
+                    </h2>
+                    <p className="font-body text-muted max-w-lg mx-auto">
+                        Curated selection of our most sought-after luxury and performance cars.
+                    </p>
+                </div>
 
-              <div className="flex justify-center gap-6 text-4xl mb-6">
+                <FeaturedCarsGrid initialCars={featuredCars} />
 
-                <span title="First Ride" className="hover:scale-110 transition">🥉</span>
-                <span title="Explorer" className="hover:scale-110 transition">🥈</span>
-                <span title="Elite Driver" className="hover:scale-110 transition">🥇</span>
+                <div className="text-center mt-12">
+                    <Link
+                        href="/cars"
+                        className="inline-flex items-center gap-2 border border-surface-3 hover:border-gold/50 text-muted hover:text-white-soft font-body text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:bg-surface"
+                    >
+                        Browse All Vehicles
+                        <span className="text-gold">→</span>
+                    </Link>
+                </div>
 
-              </div>
-
-              <p className="text-gray-600 text-sm">
-                Achieve milestones and unlock exclusive driver badges.
-              </p>
-
-            </div>
+            </section>
 
 
-            {/* BENEFITS CARD */}
-            <div className="bg-gray-50 rounded-3xl p-10 shadow-lg hover:shadow-xl transition">
+            {/* ══════════════════════════════════════
+                HOW IT WORKS
+            ══════════════════════════════════════ */}
+            <section className="py-28 bg-surface border-y border-surface-3">
+                <div className="max-w-7xl mx-auto px-6">
 
-              <p className="text-sm text-gray-500 mb-4">
-                Exclusive Benefits
-              </p>
+                    <div className="text-center mb-20">
+                        <p className="text-gold font-stats text-xs tracking-[0.3em] uppercase mb-4">
+                            Simple Process
+                        </p>
+                        <h2 className="font-heading text-5xl md:text-6xl font-light text-white-soft">
+                            How It Works
+                        </h2>
+                    </div>
 
-              <div className="text-4xl mb-4">
-                💸
-              </div>
+                    <div className="grid md:grid-cols-3 gap-8 relative">
 
-              <p className="text-gray-600">
-                Higher driver levels unlock
-                <span className="font-semibold">
-                  {" "}exclusive discounts, priority access,
-                </span>
-                and better rental deals.
-              </p>
+                        {/* Connecting line (desktop) */}
+                        <div className="hidden md:block absolute top-12 left-[calc(33.333%+1rem)] right-[calc(33.333%+1rem)] h-px bg-surface-3" aria-hidden />
 
-            </div>
+                        {STEPS.map((step, i) => (
+                            <div key={i} className="relative flex flex-col items-center text-center group">
 
-          </div>
+                                {/* Number + icon */}
+                                <div className="relative mb-8">
+                                    <div className="w-24 h-24 rounded-full bg-surface-2 border border-surface-3 group-hover:border-gold/30 flex items-center justify-center text-3xl transition-all duration-300 group-hover:bg-surface-3">
+                                        {step.icon}
+                                    </div>
+                                    <span className="absolute -top-2 -right-2 font-stats text-[10px] text-gold/60 font-bold">
+                                        {step.number}
+                                    </span>
+                                </div>
+
+                                <h3 className="font-heading text-2xl font-semibold text-white-soft mb-3 group-hover:text-gold transition-colors duration-300">
+                                    {step.title}
+                                </h3>
+
+                                <p className="font-body text-muted text-sm leading-relaxed max-w-xs">
+                                    {step.desc}
+                                </p>
+
+                            </div>
+                        ))}
+                    </div>
+
+                </div>
+            </section>
+
+
+            {/* ══════════════════════════════════════
+                LOYALTY TIERS
+            ══════════════════════════════════════ */}
+            <section className="py-28 max-w-7xl mx-auto px-6">
+
+                <div className="text-center mb-16">
+                    <p className="text-gold font-stats text-xs tracking-[0.3em] uppercase mb-4">
+                        Gamified Rewards
+                    </p>
+                    <h2 className="font-heading text-5xl md:text-6xl font-light text-white-soft mb-4">
+                        The AURUM Programme
+                    </h2>
+                    <p className="font-body text-muted max-w-xl mx-auto">
+                        Every rental earns XP. Level up your tier and unlock exclusive
+                        benefits — from discounts to personal concierge service.
+                    </p>
+                </div>
+
+                {/* Tier cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {TIERS.map((tier, i) => (
+                        <div
+                            key={i}
+                            className="relative bg-surface rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 group"
+                            style={{ borderColor: tier.border }}
+                        >
+                            {/* Subtle glow on hover */}
+                            <div
+                                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                                style={{ boxShadow: `0 0 24px ${tier.color}18` }}
+                            />
+
+                            {/* Icon */}
+                            <div className="text-3xl mb-4">{tier.icon}</div>
+
+                            {/* XP threshold */}
+                            <p
+                                className="font-stats text-[11px] font-bold tracking-wider uppercase mb-1"
+                                style={{ color: tier.color }}
+                            >
+                                {tier.xp} XP
+                            </p>
+
+                            {/* Tier name */}
+                            <h3
+                                className="font-heading text-lg font-semibold mb-4 leading-tight"
+                                style={{ color: tier.color }}
+                            >
+                                {tier.name}
+                            </h3>
+
+                            {/* Benefits */}
+                            <ul className="space-y-2">
+                                {tier.benefits.map((b, j) => (
+                                    <li key={j} className="flex items-start gap-2 text-muted text-xs font-body">
+                                        <span className="text-[8px] mt-1 shrink-0" style={{ color: tier.color }}>◆</span>
+                                        {b}
+                                    </li>
+                                ))}
+                            </ul>
+
+                        </div>
+                    ))}
+                </div>
+
+                {/* XP progress teaser */}
+                <div className="mt-12 glass rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                        <p className="font-heading text-2xl font-semibold text-white-soft mb-1">
+                            Start earning XP today
+                        </p>
+                        <p className="font-body text-muted text-sm">
+                            Your first rental earns a <span className="text-gold font-semibold">+100 XP bonus</span> — instantly unlocking Road Explorer status.
+                        </p>
+                    </div>
+                    <Link
+                        href={session ? "/cars" : "/register"}
+                        className="shrink-0 bg-gold hover:bg-gold-light text-dark font-body font-semibold text-sm px-8 py-3.5 rounded-full transition-colors duration-200 whitespace-nowrap"
+                    >
+                        {session ? "Browse Cars" : "Create Account"}
+                    </Link>
+                </div>
+
+            </section>
+
+
+            {/* ══════════════════════════════════════
+                FINAL CTA
+            ══════════════════════════════════════ */}
+            <section className="relative py-32 overflow-hidden bg-surface border-t border-surface-3">
+
+                {/* Background glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-100 bg-gold/5 blur-[100px] rounded-full pointer-events-none" />
+
+                <div className="relative max-w-4xl mx-auto px-6 text-center">
+
+                    <p className="text-gold font-stats text-xs tracking-[0.3em] uppercase mb-6">
+                        Your Next Ride Awaits
+                    </p>
+
+                    <h2 className="font-heading text-5xl md:text-7xl font-light text-white-soft mb-6 leading-tight">
+                        Ready to Drive
+                        <br />
+                        <span className="text-gradient-gold italic">Something Rare?</span>
+                    </h2>
+
+                    <p className="font-body text-muted text-base md:text-lg mb-12 max-w-xl mx-auto">
+                        Browse our fleet of extraordinary vehicles and start your journey towards
+                        elite driver status.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Link
+                            href="/cars"
+                            className="bg-gold hover:bg-gold-light text-dark font-body font-semibold px-10 py-4 rounded-full transition-colors duration-200 text-sm"
+                        >
+                            Browse All Cars
+                        </Link>
+                        {!session && (
+                            <Link
+                                href="/register"
+                                className="border border-surface-3 hover:border-gold/40 text-muted hover:text-white-soft font-body text-sm px-10 py-4 rounded-full transition-all duration-300"
+                            >
+                                Create Free Account
+                            </Link>
+                        )}
+                    </div>
+
+                </div>
+            </section>
+
+
+            {/* ══════════════════════════════════════
+                FOOTER
+            ══════════════════════════════════════ */}
+            <footer className="bg-dark border-t border-surface-3">
+
+                <div className="max-w-7xl mx-auto px-6 py-16">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+
+                        {/* Brand */}
+                        <div className="md:col-span-2">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-gold text-xs" aria-hidden>◆</span>
+                                <span className="font-heading text-xl font-semibold tracking-[0.22em] text-white-soft uppercase">
+                                    AURUM
+                                </span>
+                            </div>
+                            <p className="font-body text-muted text-sm leading-relaxed max-w-xs">
+                                Premium car rental with a gamified loyalty programme.
+                                Drive extraordinary vehicles and earn exclusive rewards.
+                            </p>
+                        </div>
+
+                        {/* Navigation */}
+                        <div>
+                            <p className="font-stats text-[11px] tracking-widest text-muted-2 uppercase mb-5">
+                                Explore
+                            </p>
+                            <ul className="space-y-3">
+                                {[
+                                    { label: "Home",         href: "/" },
+                                    { label: "Browse Cars",  href: "/cars" },
+                                ].map(l => (
+                                    <li key={l.href}>
+                                        <Link href={l.href} className="font-body text-sm text-muted hover:text-white-soft transition-colors duration-200">
+                                            {l.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Account */}
+                        <div>
+                            <p className="font-stats text-[11px] tracking-widest text-muted-2 uppercase mb-5">
+                                Account
+                            </p>
+                            <ul className="space-y-3">
+                                {[
+                                    { label: "Sign In",   href: "/login" },
+                                    { label: "Register",  href: "/register" },
+                                    { label: "Profile",   href: "/profile" },
+                                ].map(l => (
+                                    <li key={l.href}>
+                                        <Link href={l.href} className="font-body text-sm text-muted hover:text-white-soft transition-colors duration-200">
+                                            {l.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    {/* Bottom row */}
+                    <div className="border-t border-surface-3 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="font-stats text-[11px] text-muted-2 tracking-wide">
+                            © {new Date().getFullYear()} AURUM. All rights reserved.
+                        </p>
+                        <div className="flex gap-6">
+                            <Link href="/privacy" className="font-body text-xs text-muted-2 hover:text-muted transition-colors">
+                                Privacy Policy
+                            </Link>
+                            <Link href="/terms" className="font-body text-xs text-muted-2 hover:text-muted transition-colors">
+                                Terms of Service
+                            </Link>
+                        </div>
+                    </div>
+
+                </div>
+            </footer>
+
 
         </div>
-
-      </section>
-
-
-      {/* FINAL CTA */}
-      <section className="relative py-32 overflow-hidden">
-
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-linear-to-b from-white via-blue-50 to-blue-100" />
-
-        {/* Glow */}
-        <div className="absolute top-1/2 left-1/2 w-150 h-150 bg-blue-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
-
-        <div className="relative max-w-4xl mx-auto text-center px-6">
-
-          <p className="text-blue-600 font-semibold mb-3">
-            Your Next Ride Awaits
-          </p>
-
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-            Ready to Drive Something
-            <span className="text-blue-600"> Extraordinary?</span>
-          </h2>
-
-          <p className="text-gray-600 text-lg mb-10 max-w-2xl mx-auto">
-            Explore our collection of premium vehicles and start earning
-            rewards with every drive.
-          </p>
-
-          <Link
-            href="/cars"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-full text-lg font-semibold shadow-xl transition"
-          >
-            Browse Luxury Cars
-          </Link>
-
-        </div>
-
-      </section>
-
-
-    </div>
-  )
+    )
 }

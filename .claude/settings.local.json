@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx prisma *)",
+      "PowerShell(cd \"d:\\\\website\\\\car-rental-mvp\"; $env:PRISMA_MIGRATE_SKIP_GENERATE = \"false\"; echo \"yes\" | npx prisma migrate dev --name \"gamification_userbadge\" 2>&1)"
+    ]
+  }
+}

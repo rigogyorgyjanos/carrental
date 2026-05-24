@@ -5,7 +5,6 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcrypt"
 import { prisma } from "@/lib/prisma"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import Email from "next-auth/providers/email"
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma),
@@ -14,7 +13,7 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            allowDangerousEmailAccountLinking: true, // account linking google + credentials 
+            allowDangerousEmailAccountLinking: true,
         }),
         AppleProvider({
             clientId: process.env.APPLE_ID!,
@@ -27,43 +26,53 @@ export const authOptions: NextAuthOptions = {
                 if (!credentials?.email || !credentials?.password) return null
 
                 const user = await prisma.user.findUnique({
-                    where: { email: credentials?.email }
+                    where: { email: credentials.email }
                 })
                 if (!user || !user.password) return null
 
-                const valid = await bcrypt.compare(credentials!.password, user.password)
+                const valid = await bcrypt.compare(credentials.password, user.password)
                 if (!valid) return null
 
                 return user
             }
         })
     ],
+
     session: { strategy: "jwt" },
+
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.role = (user as any).role
-                token.id = user.id
+                token.id   = user.id
+                token.role = (user as { role?: string }).role ?? "USER"
+
+                const dbUser = await prisma.user.findUnique({
+                    where:  { id: user.id },
+                    select: { xp: true, level: true },
+                })
+                token.xp    = dbUser?.xp    ?? 0
+                token.level = dbUser?.level ?? 1
             }
             return token
         },
+
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id
                 session.user.role = token.role
+                session.user.xp = token.xp
+                session.user.level = token.level
             }
             return session
         },
+
         async signIn({ user, account, profile }) {
             if (account?.provider === "google") {
                 if (!user.email) return false
-
                 // @ts-ignore
                 if (profile && !profile.email_verified) return false
-
                 return true
             }
-
             return true
         },
     }

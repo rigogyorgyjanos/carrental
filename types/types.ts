@@ -5,9 +5,10 @@ export interface CarImage {
 }
 
 export interface Car {
-    id: string          
+    id: string
     name: string
     brand: string
+    model: string
     year: number
     category: string
     transmission: string
@@ -17,7 +18,8 @@ export interface Car {
     licensePlate: string
     location: string
     pricePerDay: number
+    deposit?: number
     rating: number
     reviewCount: number
-    images: CarImage[]   
+    images: CarImage[]
 }

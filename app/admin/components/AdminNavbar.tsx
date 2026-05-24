@@ -1,89 +1,68 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 
+const NAV = [
+    { href: "/admin",              label: "Dashboard" },
+    { href: "/admin/transactions", label: "Bookings"  },
+    { href: "/admin/cars",         label: "Cars"      },
+    { href: "/admin/users",        label: "Users"     },
+]
+
 export default function AdminNavbar() {
-    const [isOpen, setIsOpen] = useState(false)
+    const path = usePathname()
 
     return (
-        <nav className="bg-white shadow-md">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16 items-center">
+        <header className="sticky top-0 z-50 border-b border-surface-3 bg-dark/95 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
 
-                    {/* Logo / Title */}
-                    <div className="shrink-0 font-bold text-xl text-gray-800">
-                        <Link href="/admin">
-                            Admin Panel
-                        </Link>
-                    </div>
+                {/* Logo */}
+                <Link href="/admin" className="flex items-center gap-2 shrink-0">
+                    <span className="text-gold font-stats text-sm tracking-[0.2em]">◆ AURUM</span>
+                    <span className="text-muted text-xs font-stats border-l border-surface-3 pl-2">Admin</span>
+                </Link>
 
-                    {/* Desktop menu */}
-                    <div className="hidden md:flex md:items-center md:space-x-6">
-                        <Link href="/admin/cars" className="text-gray-700 hover:text-blue-600">
-                            Cars
-                        </Link>
-                        <Link href="/admin/users" className="text-gray-700 hover:text-blue-600">
-                            Users
-                        </Link>
-                        <button
-                            onClick={() => signOut()}
-                            className="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-                        >
-                            Logout
-                        </button>
-                    </div>
-
-                    {/* Mobile menu button */}
-                    <div className="md:hidden flex items-center">
-                        <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="text-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                        >
-                            <svg
-                                className="h-6 w-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
+                {/* Nav links */}
+                <nav className="hidden sm:flex items-center gap-1">
+                    {NAV.map(n => {
+                        const active = n.href === "/admin"
+                            ? path === "/admin"
+                            : path.startsWith(n.href)
+                        return (
+                            <Link
+                                key={n.href}
+                                href={n.href}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-stats transition-colors ${
+                                    active
+                                        ? "bg-gold/15 text-gold"
+                                        : "text-muted hover:text-white-soft hover:bg-surface"
+                                }`}
                             >
-                                {isOpen ? (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                ) : (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                )}
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                                {n.label}
+                            </Link>
+                        )
+                    })}
+                </nav>
 
-            {/* Mobile menu */}
-            {isOpen && (
-                <div className="md:hidden bg-white border-t border-gray-200">
+                {/* Right: view site + logout */}
+                <div className="flex items-center gap-2 shrink-0">
                     <Link
-                        href="/admin/cars"
-                        className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsOpen(false)}
+                        href="/"
+                        target="_blank"
+                        className="text-xs font-stats text-muted hover:text-white-soft transition-colors px-2 py-1 hidden sm:block"
                     >
-                        Cars
-                    </Link>
-                    <Link
-                        href="/admin/users"
-                        className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsOpen(false)}
-                    >
-                        Users
+                        View site ↗
                     </Link>
                     <button
-                        onClick={() => signOut()}
-                        className="w-full text-left px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="text-xs font-stats px-3 py-1.5 rounded-lg border border-danger/30 text-danger/80 hover:bg-danger/10 hover:border-danger/50 transition-all"
                     >
                         Logout
                     </button>
                 </div>
-            )}
-        </nav>
+            </div>
+        </header>
     )
 }

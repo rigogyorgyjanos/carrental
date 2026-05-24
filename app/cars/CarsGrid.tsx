@@ -1,71 +1,132 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { useEffect, useState } from "react"
 import { Car } from "@/types/types"
 
-interface CarsGridProps {
-    initialCars: Car[]
-    search: string
-    brand: string
-    sort: string
-    page: number
+function getXpPerDay(category: string): number {
+    const c = category.toLowerCase()
+    if (c.includes("super") || c.includes("hyper")) return 30
+    if (c.includes("luxury") || c.includes("sport")) return 20
+    if (c.includes("premium"))                        return 15
+    return 10
 }
 
-export default function CarsGrid({
-    initialCars,
-    search,
-    brand,
-    sort,
-    page
-}: CarsGridProps) {
+interface Props {
+    initialCars: Car[]
+}
+
+export default function CarsGrid({ initialCars }: Props) {
     const [cars, setCars] = useState<Car[]>(initialCars)
-    const [loading, setLoading] = useState(false)
+
+    // Small debounce so filter transitions don't flash stale results
+    useEffect(() => {
+        const t = setTimeout(() => setCars(initialCars), 150)
+        return () => clearTimeout(t)
+    }, [initialCars])
+
+    if (!cars.length) {
+        return (
+            <div className="flex flex-col items-center justify-center py-32 text-center">
+                <p className="text-4xl text-muted mb-4">◎</p>
+                <h3 className="font-heading text-2xl text-white-soft mb-2">No vehicles found</h3>
+                <p className="text-muted text-sm font-body">Try adjusting your filters or broadening your search.</p>
+            </div>
+        )
+    }
 
     return (
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {loading ? (
-                // Skeleton loading
-                Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="bg-gray-200 animate-pulse h-64 rounded-xl"></div>
-                ))
-            ) : (
-                cars.map((car: Car) => (
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {cars.map(car => {
+                const xp = getXpPerDay(car.category)
+                const imageUrl = car.images[0]?.url || "/placeholder.png"
+
+                return (
                     <Link
                         key={car.id}
                         href={`/cars/${car.id}`}
-                        className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden"
+                        className="group relative bg-surface rounded-2xl overflow-hidden h-90 border border-surface-3 hover:border-gold/25 transition-all duration-300 card-glow cursor-pointer"
                     >
-                        <Image
-                            src={car.images[0]?.url || "/placeholder.png"}
+                        {/* Full-bleed image */}
+                        <img
+                            src={imageUrl}
                             alt={car.name}
-                            width={400}
-                            height={300}
-                            className="object-cover w-full h-48"
-                            placeholder="blur"
-                            blurDataURL="/placeholder.png"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="p-4">
-                            <h2 className="font-bold text-lg">{car.name}</h2>
-                            <p className="text-gray-500 text-sm">{car.brand}</p>
-                            <div className="text-gray-600 text-sm mt-1">
-                                {car.year} • {car.category} • {car.transmission} • {car.fuelType} • {car.seats} seats
+
+                        {/* Always-on bottom gradient */}
+                        <div className="absolute inset-0 bg-linear-to-t from-dark/95 via-dark/20 to-transparent" />
+
+                        {/* XP chip — top right, always visible */}
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-dark/80 backdrop-blur-sm border border-gold/35 text-gold text-[10px] font-stats font-bold px-2.5 py-1 rounded-full">
+                            <span className="text-[8px]">◆</span>
+                            +{xp} XP/day
+                        </div>
+
+                        {/* Default state: brand + name at bottom */}
+                        <div className="absolute bottom-5 left-5 right-14 z-10 transition-opacity duration-200 group-hover:opacity-0">
+                            <p className="text-muted-2 text-[10px] font-stats uppercase tracking-widest mb-1">
+                                {car.brand}
+                            </p>
+                            <h3 className="text-white-soft font-heading text-xl font-semibold leading-tight">
+                                {car.name}
+                            </h3>
+                        </div>
+
+                        {/* ── Hover reveal panel ── */}
+                        <div className="absolute bottom-0 inset-x-0 z-20 bg-dark/95 backdrop-blur-sm px-5 pt-4 pb-5 translate-y-full group-hover:translate-y-0 transition-transform duration-350 ease-out">
+
+                            {/* Brand + Name */}
+                            <p className="text-muted-2 text-[10px] font-stats uppercase tracking-widest mb-0.5">
+                                {car.brand}
+                            </p>
+                            <h3 className="text-white-soft font-heading text-lg font-semibold leading-tight mb-3">
+                                {car.name}
+                            </h3>
+
+                            {/* Price row */}
+                            <div className="flex items-baseline justify-between mb-3">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-gold font-stats font-bold text-2xl">
+                                        €{car.pricePerDay}
+                                    </span>
+                                    <span className="text-muted text-xs font-stats">/day</span>
+                                </div>
+                                <span className="text-[10px] font-stats text-gold/60">
+                                    ◆ Earn {xp}+ XP
+                                </span>
                             </div>
-                            <div className="text-gray-600 text-sm mt-1">
-                                Mileage: {car.mileage} km • License: {car.licensePlate} • Location: {car.location}
+
+                            {/* Specs */}
+                            <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-[10px] font-stats text-muted mb-3">
+                                <span>{car.category}</span>
+                                <span className="text-surface-3">·</span>
+                                <span>{car.transmission}</span>
+                                <span className="text-surface-3">·</span>
+                                <span>{car.seats} seats</span>
+                                {car.rating > 0 && (
+                                    <>
+                                        <span className="text-surface-3">·</span>
+                                        <span className="text-gold/70">★ {car.rating}</span>
+                                    </>
+                                )}
                             </div>
-                            <div className="mt-3 flex justify-between items-center">
-                                <p className="font-semibold text-blue-600">€{car.pricePerDay}/day</p>
-                                <span className="text-sm text-gray-400">View →</span>
+
+                            {/* Location + CTA */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted text-[10px] font-stats truncate mr-2">
+                                    📍 {car.location}
+                                </span>
+                                <div className="shrink-0 flex items-center gap-1 bg-gold text-dark text-[11px] font-semibold px-3.5 py-2 rounded-lg transition-colors group-hover:bg-gold-light">
+                                    View
+                                    <span>→</span>
+                                </div>
                             </div>
-                            <div className="text-yellow-500 text-sm mt-1">
-                                ⭐ {car.rating} ({car.reviewCount} reviews)
-                            </div>
+
                         </div>
                     </Link>
-                ))
-            )}
+                )
+            })}
         </div>
     )
 }

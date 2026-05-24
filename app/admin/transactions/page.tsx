@@ -1,45 +1,60 @@
-"use client"
+import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { redirect } from "next/navigation"
+import AdminBookingsTable from "./AdminBookingsTable"
 
-import { useEffect, useState } from "react"
+export const dynamic = "force-dynamic"
 
-interface Transaction {
-    id: string
-    userName: string
-    productName: string
-    startDate: string
-    endDate: string
-    price: number
-    status: string
-}
+export default async function TransactionsAdminPage() {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || session.user.role !== "ADMIN") redirect("/")
 
-export default function TransactionsAdminPage() {
-    const [transactions, setTransactions] = useState<Transaction[]>([])
+    const transactions = await prisma.transaction.findMany({
+        include: {
+            user:    { select: { id: true, name: true, email: true } },
+            product: { select: { id: true, name: true, brand: true, category: true, dailyKmLimit: true, excessKmFee: true } },
+        },
+        orderBy: [
+            { status: "asc" },
+            { createdAt: "desc" },
+        ],
+    })
 
-    useEffect(() => {
-        fetch("/api/admin/transactions")
-            .then(res => res.json())
-            .then(data => setTransactions(data))
-    }, [])
+    const serialized = transactions.map(t => ({
+        id:          t.id,
+        userName:    t.user.name ?? t.user.email ?? "—",
+        userEmail:   t.user.email ?? "",
+        productName: `${t.product.brand} ${t.product.name}`,
+        productId:   t.product.id,
+        category:    t.product.category,
+        startDate:   t.startDate.toISOString(),
+        endDate:     t.endDate.toISOString(),
+        totalDays:   t.totalDays,
+        pricePerDay: t.pricePerDay,
+        totalPrice:  t.totalPrice,
+        deposit:     t.deposit,
+        discountApplied: t.discountApplied,
+        xpAwarded:       t.xpAwarded,
+        status:          t.status as string,
+        notes:           t.notes,
+        createdAt:       t.createdAt.toISOString(),
+        paymentIntentId: t.paymentIntentId ?? null,
+        startMileage:     t.startMileage       ?? null,
+        endMileage:       t.endMileage         ?? null,
+        excessKmCharge:   t.excessKmCharge     ?? null,
+        dailyKmLimit:     t.product.dailyKmLimit ?? null,
+        excessKmFee:      t.product.excessKmFee  ?? null,
+        extraKmPurchased: t.extraKmPurchased,
+    }))
 
     return (
-        <div className="p-8">
-            <h1 className="text-3xl font-bold mb-4">Transactions</h1>
-
-            <div className="grid gap-4">
-                {transactions.map(t => (
-                    <div key={t.id} className="p-4 border rounded flex justify-between items-center">
-                        <div>
-                            <p>User: {t.userName}</p>
-                            <p>Product: {t.productName}</p>
-                            <p>{new Date(t.startDate).toLocaleDateString()} - {new Date(t.endDate).toLocaleDateString()}</p>
-                            <p>${t.price.toFixed(2)}</p>
-                        </div>
-                        <div>
-                            <p className="capitalize">{t.status}</p>
-                        </div>
-                    </div>
-                ))}
+        <div className="space-y-6">
+            <div>
+                <p className="text-gold text-[11px] font-stats uppercase tracking-[0.2em] mb-1">AURUM Admin</p>
+                <h1 className="font-heading text-4xl font-light text-white-soft">Bookings</h1>
             </div>
+            <AdminBookingsTable initialBookings={serialized} />
         </div>
     )
 }

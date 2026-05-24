@@ -1,22 +1,42 @@
 import "./globals.css"
-import { Inter } from "next/font/google"
+import { Cormorant_Garamond, DM_Sans, Space_Grotesk } from "next/font/google"
 import SessionProviderWrapper from "./SessionProviderWrapper"
 import Navbar from "@/components/Navbar"
+import CookieConsent from "@/components/CookieConsent"
 
-const inter = Inter({ subsets: ["latin"] })
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+})
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dmsans",
+  display: "swap",
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+})
 
 export const metadata = {
-  title: "Car Rental",
-  description: "car rental  ",
+  title: "AURUM — Premium Car Rental",
+  description: "Luxury car rentals with exclusive rewards. Drive extraordinary.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${cormorant.variable} ${dmSans.variable} ${spaceGrotesk.variable} font-body bg-dark text-white-soft`}>
         <SessionProviderWrapper>
           <Navbar />
           {children}
+          <CookieConsent />
         </SessionProviderWrapper>
       </body>
     </html>

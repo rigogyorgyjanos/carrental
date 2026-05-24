@@ -40,7 +40,7 @@ model User {
   name      String?
   email     String   @unique
   emailVerified DateTime?
-  image     String? 
+  image     String?
 
   password  String?
   role      Role     @default(USER)
@@ -53,10 +53,15 @@ model User {
 
   transactions Transaction[]
   xpLogs      XpTransaction[]
+  badges      UserBadge[]
+  reviews     Review[]
 
-  PasswordResets PasswordReset[] 
-  
+  PasswordResets PasswordReset[]
+
   createdAt DateTime @default(now())
+
+  @@index([role])
+  @@index([createdAt])
 }
 
 model PasswordReset {
@@ -91,6 +96,8 @@ model Product {
   location      String     @default("Budapest")
   minimumAge    Int?       // opcionális
   minimumRentalDays Int?   // opcionális
+  dailyKmLimit  Int?       // included km per day, null = unlimited
+  excessKmFee   Float?     // €/km over limit, null = no excess charge
   featured      Boolean    @default(false)
   active        Boolean    @default(true)
   rating        Float?     // opcionális
@@ -98,9 +105,16 @@ model Product {
 
   images        CarImage[]
   transactions  Transaction[]
+  reviews       Review[]
 
   createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt 
+  updatedAt     DateTime   @updatedAt
+
+  @@index([active])
+  @@index([category])
+  @@index([location])
+  @@index([featured, active])
+  @@index([active, pricePerDay])
 }
 
 model CarImage {
@@ -117,10 +131,10 @@ model Transaction {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user      User    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
 
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
   // Rental period
@@ -129,18 +143,39 @@ model Transaction {
   totalDays Int
 
   // Pricing snapshot
-  pricePerDay Float
-  totalPrice  Float
-  deposit     Float?
+  pricePerDay     Float
+  totalPrice      Float
+  deposit         Float?
+  discountApplied Float?  // percentage discount applied at booking (e.g. 0.10 = 10%)
+
+  // Gamification
+  xpAwarded Int?    // XP awarded when booking was completed
 
   // Rental lifecycle
   status TransactionStatus @default(PENDING)
 
   // Optional payment integration
+  stripeSessionId String?
   paymentIntentId String?
+
+  // Mileage tracking
+  startMileage      Int?   // odometer at pickup
+  endMileage        Int?   // odometer at return
+  extraKmPurchased  Int    @default(0) // total extra km bought (sum of all packages)
+  excessKmCharge    Float? // computed: (usedKm − allowedKm − extraKmPurchased) × excessKmFee
+
+  // Km package purchase history
+  kmPurchases       KmPurchase[]
 
   // Admin notes
   notes String?
+
+  @@index([userId, status])
+  @@index([productId, status])
+  @@index([status, createdAt])
+  @@index([startDate, endDate])
+  @@index([stripeSessionId])
+  @@index([paymentIntentId])
 }
 enum TransactionStatus {
   PENDING
@@ -150,16 +185,45 @@ enum TransactionStatus {
   CANCELLED
 }
 
+model KmPurchase {
+  id              String      @id @default(cuid())
+  kmAmount        Int
+  pricePaid       Float
+  stripeSessionId String?     @unique
+  createdAt       DateTime    @default(now())
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSessionId])
+}
+
 model Badge {
- id          String @id @default(cuid())
- name        String
- description String
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  icon        String      @default("🏆")
+
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
 }
 
 model XpTransaction {
  id            String @id @default(cuid())
 
- user          User   @relation(fields: [userId], references: [id])
+ user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
  userId        String
 
  transactionId String?
@@ -167,6 +231,22 @@ model XpTransaction {
  xpAmount      Int
 
  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
 }
 
 enum Role {
