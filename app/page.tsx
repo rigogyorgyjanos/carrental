@@ -174,7 +174,7 @@ export default async function LandingPage() {
                     </p>
 
                     {/* Search bar */}
-                    <div className="w-full flex justify-center animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+                    <div className="relative z-10 w-full flex justify-center animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
                         <HeroSearch />
                     </div>
 

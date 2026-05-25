@@ -69,8 +69,8 @@ export async function PATCH(
             return NextResponse.json({ success: true, xpAwarded: result.xpAwarded, newBadges: result.newBadges })
         }
 
-        // CONFIRMED → CANCELLED: auto-refund if payment was collected
-        if (existing.status === "CONFIRMED" && newStatus === "CANCELLED" && existing.paymentIntentId) {
+        // PENDING or CONFIRMED → CANCELLED: auto-refund if payment was collected
+        if (["PENDING", "CONFIRMED"].includes(existing.status) && newStatus === "CANCELLED" && existing.paymentIntentId) {
             try {
                 await stripe.refunds.create({ payment_intent: existing.paymentIntentId })
             } catch (err) {

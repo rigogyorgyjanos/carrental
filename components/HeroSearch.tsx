@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
@@ -11,14 +12,18 @@ export default function HeroSearch() {
     const router = useRouter()
     const [location, setLocation] = useState("")
     const [range, setRange]       = useState<DateRange | undefined>()
-    const [calOpen, setCalOpen]   = useState(false)
-    const wrapRef = useRef<HTMLDivElement>(null)
+    const [calOpen, setCalOpen] = useState(false)
+    const [dropPos, setDropPos] = useState({ top: 0, right: 0 })
 
-    // Close calendar when clicking outside
+    const buttonRef = useRef<HTMLButtonElement>(null)
+    const portalRef = useRef<HTMLDivElement>(null)
+
+    // Close when clicking outside button or portal
     useEffect(() => {
         if (!calOpen) return
         const onDown = (e: MouseEvent) => {
-            if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+            const target = e.target as Node
+            if (!buttonRef.current?.contains(target) && !portalRef.current?.contains(target)) {
                 setCalOpen(false)
             }
         }
@@ -26,7 +31,34 @@ export default function HeroSearch() {
         return () => document.removeEventListener("mousedown", onDown)
     }, [calOpen])
 
+    // Keep dropdown anchored to button while scrolling
+    useEffect(() => {
+        if (!calOpen) return
+        const onScroll = () => {
+            if (buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect()
+                setDropPos({
+                    top:   rect.bottom + 8,
+                    right: window.innerWidth - rect.right,
+                })
+            }
+        }
+        window.addEventListener("scroll", onScroll, { passive: true })
+        return () => window.removeEventListener("scroll", onScroll)
+    }, [calOpen])
+
     const today = startOfDay(new Date())
+
+    const openCalendar = () => {
+        if (!calOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setDropPos({
+                top:   rect.bottom + 8,
+                right: window.innerWidth - rect.right,
+            })
+        }
+        setCalOpen(v => !v)
+    }
 
     const handleSearch = () => {
         const params = new URLSearchParams()
@@ -36,7 +68,6 @@ export default function HeroSearch() {
         router.push(`/cars?${params.toString()}`)
     }
 
-    // Date button label
     const dateLabel = (() => {
         if (range?.from && range?.to) {
             const nights = Math.round(
@@ -70,10 +101,11 @@ export default function HeroSearch() {
                 <div className="hidden md:block w-px bg-surface-3 self-center h-8" aria-hidden />
 
                 {/* ── Date range picker ────────────────────────────── */}
-                <div ref={wrapRef} className="relative">
+                <div className="relative">
                     <button
+                        ref={buttonRef}
                         type="button"
-                        onClick={() => setCalOpen(v => !v)}
+                        onClick={openCalendar}
                         aria-label="Select rental dates"
                         aria-expanded={calOpen}
                         className={`flex items-center gap-2.5 rounded-xl px-4 py-3 w-full md:w-auto text-sm transition-colors ${
@@ -91,7 +123,7 @@ export default function HeroSearch() {
                                     tabIndex={0}
                                     aria-label="Clear dates"
                                     onClick={e => { e.stopPropagation(); setRange(undefined) }}
-                                    onKeyDown={e => { if (e.key === "Enter") { setRange(undefined) } }}
+                                    onKeyDown={e => { if (e.key === "Enter") setRange(undefined) }}
                                     className="ml-auto text-muted-2 hover:text-danger text-[11px] cursor-pointer pl-2"
                                 >
                                     ✕
@@ -101,23 +133,6 @@ export default function HeroSearch() {
                             <span className="text-muted whitespace-nowrap">Select dates</span>
                         )}
                     </button>
-
-                    {/* Dropdown calendar */}
-                    {calOpen && (
-                        <div className="absolute top-full mt-2 right-0 z-50 bg-surface border border-surface-3 rounded-2xl shadow-2xl overflow-hidden">
-                            <DayPicker
-                                mode="range"
-                                numberOfMonths={2}
-                                selected={range}
-                                onSelect={r => {
-                                    setRange(r)
-                                    if (r?.from && r?.to) setCalOpen(false)
-                                }}
-                                disabled={{ before: today }}
-                                fromDate={today}
-                            />
-                        </div>
-                    )}
                 </div>
 
                 {/* ── Search CTA ──────────────────────────────────── */}
@@ -129,6 +144,41 @@ export default function HeroSearch() {
                 </button>
 
             </div>
+
+            {/* ── Calendar — portalled to body to escape overflow:hidden parents ── */}
+            {calOpen && typeof window !== "undefined" && createPortal(
+                <div
+                    ref={portalRef}
+                    style={{ position: "fixed", top: dropPos.top, right: dropPos.right, zIndex: 9999 }}
+                    className="bg-surface border border-surface-3 rounded-2xl shadow-2xl overflow-hidden"
+                >
+                    <DayPicker
+                        mode="range"
+                        numberOfMonths={2}
+                        selected={range}
+                        onSelect={setRange}
+                        disabled={{ before: today }}
+                        startMonth={today}
+                    />
+                    <div className="px-4 pb-4 flex justify-between items-center border-t border-surface-3 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => setRange(undefined)}
+                            className="text-xs font-stats text-muted-2 hover:text-danger transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-2"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCalOpen(false)}
+                            className="text-xs font-stats font-semibold bg-gold hover:bg-gold-light text-dark px-4 py-1.5 rounded-lg transition-colors"
+                        >
+                            Apply
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     )
 }

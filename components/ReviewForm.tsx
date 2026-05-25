@@ -5,10 +5,8 @@ import { useState } from "react"
 interface Props {
     carId:    string
     carName:  string
-    onPosted: (review: { rating: number; comment: string | null; user: { name: string | null } }) => void
+    onPosted: () => void
 }
-
-const REVIEW_XP = 25
 
 export default function ReviewForm({ carId, carName, onPosted }: Props) {
     const [rating,   setRating]   = useState(0)
@@ -30,9 +28,8 @@ export default function ReviewForm({ carId, carName, onPosted }: Props) {
         })
 
         if (res.ok) {
-            const data = await res.json()
             setStatus("success")
-            onPosted(data.review)
+            onPosted()
         } else {
             const data = await res.json().catch(() => ({}))
             setErrorMsg(data.error ?? "Failed to submit review.")
@@ -44,11 +41,10 @@ export default function ReviewForm({ carId, carName, onPosted }: Props) {
         return (
             <div className="bg-gold/8 border border-gold/20 rounded-2xl px-6 py-8 text-center space-y-3">
                 <div className="text-4xl">⭐</div>
-                <h3 className="font-heading text-xl text-white-soft">Thank you for your review!</h3>
-                <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/20 rounded-full px-5 py-2">
-                    <span className="text-gold text-sm">◆</span>
-                    <span className="text-gold text-sm font-stats font-semibold">+{REVIEW_XP} XP earned</span>
-                </div>
+                <h3 className="font-heading text-xl text-white-soft">Review submitted!</h3>
+                <p className="text-muted text-sm font-stats">
+                    Your review is awaiting admin approval. You&apos;ll earn +1 XP once it&apos;s approved.
+                </p>
             </div>
         )
     }
@@ -58,7 +54,7 @@ export default function ReviewForm({ carId, carName, onPosted }: Props) {
             <div>
                 <h3 className="font-heading text-xl text-white-soft mb-1">Leave a Review</h3>
                 <p className="text-muted text-xs font-stats">
-                    Share your experience with the {carName}. Earn +{REVIEW_XP} XP.
+                    Share your experience with the {carName}.
                 </p>
             </div>
 

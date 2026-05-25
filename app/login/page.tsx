@@ -45,7 +45,7 @@ function LoginContent() {
         setLoginError("")
 
         const result = await signIn("credentials", {
-            email,
+            email:    email.trim().toLowerCase(),
             password,
             redirect: false,
         })
@@ -60,7 +60,12 @@ function LoginContent() {
 
     const handleSocialLogin = async (provider: "google") => {
         setLoading(true)
-        await signIn(provider, { callbackUrl: "/" })
+        try {
+            await signIn(provider, { callbackUrl: "/" })
+        } catch {
+            setLoginError("Sign-in failed. Please try again.")
+            setLoading(false)
+        }
     }
 
     return (
@@ -176,7 +181,7 @@ function LoginContent() {
 
             {/* Modals */}
             <ForgotPasswordModal isOpen={isForgotOpen} onClose={() => setForgotOpen(false)} />
-            <ResetPasswordModal isOpen={isResetOpen} onClose={() => setResetOpen(false)} />
+            <ResetPasswordModal isOpen={isResetOpen} onClose={() => setResetOpen(false)} token={resetToken ?? ""} />
         </div>
     )
 }

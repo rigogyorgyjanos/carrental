@@ -81,7 +81,7 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
             include: { images: true },
         }),
         prisma.review.findMany({
-            where:   { productId: id },
+            where:   { productId: id, approved: true },
             include: { user: { select: { id: true, name: true, image: true } } },
             orderBy: { createdAt: "desc" },
         }),
@@ -97,7 +97,7 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
             }),
             prisma.review.findUnique({
                 where: { userId_productId: { userId, productId: id } },
-                select: { id: true },
+                select: { id: true, approved: true },
             }),
         ])
         canReview = !!completedBooking && !existingReview

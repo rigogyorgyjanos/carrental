@@ -36,13 +36,18 @@ export async function PUT(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
-    if (!await requireAdmin()) {
+    const session = await requireAdmin()
+    if (!session) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     const { id } = await context.params
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
     const { name, email, role, xp, level } = await req.json()
+
+    if (id === session.user.id && role && role !== session.user.role) {
+        return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 })
+    }
 
     try {
         if (email) {

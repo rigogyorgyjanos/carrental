@@ -37,6 +37,7 @@ export default async function AdminDashboard() {
         confirmedCount,
         completedCount,
         totalUsers,
+        pendingReviewCount,
         topCarsRaw,
         recentBookings,
     ] = await Promise.all([
@@ -53,6 +54,7 @@ export default async function AdminDashboard() {
         prisma.transaction.count({ where: { status: "CONFIRMED"  } }),
         prisma.transaction.count({ where: { status: "COMPLETED"  } }),
         prisma.user.count(),
+        prisma.review.count({ where: { approved: false } }),
         prisma.transaction.groupBy({
             by:      ["productId"],
             where:   { status: { in: ["COMPLETED", "ACTIVE"] } },
@@ -100,7 +102,7 @@ export default async function AdminDashboard() {
             </div>
 
             {/* ── KPI row ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <KpiCard
                     label="Total Revenue"
                     value={`€${Math.round(totalRevenue).toLocaleString()}`}
@@ -112,14 +114,21 @@ export default async function AdminDashboard() {
                     value={activeCount.toString()}
                     sub={`${confirmedCount} confirmed`}
                     color="#34D399"
-                    href="/admin/transactions"
+                    href="/admin/transactions?filter=ACTIVE"
                 />
                 <KpiCard
-                    label="Pending Review"
+                    label="Pending Bookings"
                     value={pendingCount.toString()}
                     sub="Awaiting confirmation"
                     color="#F59E0B"
-                    href="/admin/transactions"
+                    href="/admin/transactions?filter=PENDING"
+                />
+                <KpiCard
+                    label="Pending Reviews"
+                    value={pendingReviewCount.toString()}
+                    sub="Awaiting approval"
+                    color="#A78BFA"
+                    href="/admin/reviews"
                 />
                 <KpiCard
                     label="Total Users"

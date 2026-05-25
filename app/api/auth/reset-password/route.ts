@@ -6,6 +6,7 @@ import bcrypt from "bcrypt"
 export async function POST(req: Request) {
     const { token, password } = await req.json()
     if (!token || !password) return new Response("Invalid request", { status: 400 })
+    if (password.length < 8) return new Response("Password must be at least 8 characters", { status: 400 })
 
     const reset = await prisma.passwordReset.findUnique({ where: { token } })
     if (!reset || reset.expiresAt < new Date())

@@ -203,6 +203,7 @@ export async function completeBooking(bookingId: string): Promise<{
     })
 
     if (!booking)                         return { xpAwarded: 0, newBadges: [], error: "Booking not found" }
+    if (!booking.product)                 return { xpAwarded: 0, newBadges: [], error: "Booking product not found" }
     if (booking.status === "CANCELLED")   return { xpAwarded: 0, newBadges: [], error: "Booking is cancelled" }
     if (booking.status === "COMPLETED")   return { xpAwarded: 0, newBadges: [], error: "Already completed" }
     if (booking.status !== "ACTIVE")      return { xpAwarded: 0, newBadges: [], error: "Booking must be ACTIVE to complete" }

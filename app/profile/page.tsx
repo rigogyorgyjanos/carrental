@@ -44,7 +44,7 @@ const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
 
 export default async function ProfilePage() {
     const session = await getServerSession(authOptions)
-    if (!session?.user) redirect("/api/auth/signin")
+    if (!session?.user) redirect("/login")
 
     await ensureBadgesSeeded()
 
@@ -62,7 +62,7 @@ export default async function ProfilePage() {
         },
     })
 
-    if (!user) redirect("/api/auth/signin")
+    if (!user) redirect("/login")
 
     const transactions = await prisma.transaction.findMany({
         where: { userId: user.id },

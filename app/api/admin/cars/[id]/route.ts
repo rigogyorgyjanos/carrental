@@ -144,6 +144,16 @@ export async function DELETE(
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
     try {
+        const activeCount = await prisma.transaction.count({
+            where: { productId: id, status: { in: ["PENDING", "CONFIRMED", "ACTIVE"] } },
+        })
+        if (activeCount > 0) {
+            return NextResponse.json(
+                { error: `Cannot delete: car has ${activeCount} active booking(s)` },
+                { status: 409 }
+            )
+        }
+
         await prisma.product.delete({ where: { id } })
         return NextResponse.json({ message: "Car deleted" })
     } catch (error) {

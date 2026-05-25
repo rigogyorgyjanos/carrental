@@ -60,23 +60,23 @@ export default function ReviewsList({ initialReviews, carId, carName, canReview 
     const [reviews,    setReviews]    = useState(initialReviews)
     const [reviewed,   setReviewed]   = useState(!canReview)
 
-    const handlePosted = (newReview: { rating: number; comment: string | null; user: { name: string | null } }) => {
+    const [pendingNotice, setPendingNotice] = useState(false)
+
+    const handlePosted = () => {
         setReviewed(true)
-        setReviews(prev => [
-            {
-                id:        crypto.randomUUID(),
-                rating:    newReview.rating,
-                comment:   newReview.comment,
-                createdAt: new Date().toISOString(),
-                user:      { id: "me", name: newReview.user.name, image: null },
-            },
-            ...prev,
-        ])
+        setPendingNotice(true)
     }
 
     return (
         <div className="space-y-6">
             <AverageRating reviews={reviews} />
+
+            {/* Pending approval notice */}
+            {pendingNotice && (
+                <div className="bg-gold/8 border border-gold/20 rounded-xl px-5 py-4 text-sm font-stats text-gold">
+                    Your review has been submitted and is awaiting admin approval.
+                </div>
+            )}
 
             {/* Review form — shown before list if eligible */}
             {canReview && !reviewed && (

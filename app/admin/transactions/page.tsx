@@ -6,7 +6,17 @@ import AdminBookingsTable from "./AdminBookingsTable"
 
 export const dynamic = "force-dynamic"
 
-export default async function TransactionsAdminPage() {
+export default async function TransactionsAdminPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ filter?: string }>
+}) {
+    const { filter: filterParam } = await searchParams
+    const VALID = ["ALL", "PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"]
+    const initialFilter = filterParam && VALID.includes(filterParam.toUpperCase())
+        ? filterParam.toUpperCase()
+        : "ALL"
+
     const session = await getServerSession(authOptions)
     if (!session?.user || session.user.role !== "ADMIN") redirect("/")
 
@@ -54,7 +64,7 @@ export default async function TransactionsAdminPage() {
                 <p className="text-gold text-[11px] font-stats uppercase tracking-[0.2em] mb-1">AURUM Admin</p>
                 <h1 className="font-heading text-4xl font-light text-white-soft">Bookings</h1>
             </div>
-            <AdminBookingsTable initialBookings={serialized} />
+            <AdminBookingsTable initialBookings={serialized} initialFilter={initialFilter} />
         </div>
     )
 }

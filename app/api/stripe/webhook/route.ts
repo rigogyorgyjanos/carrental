@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
                 where: { stripeSessionId: session.id },
             })
 
-            if (kmAmount > 0 && booking.status === "ACTIVE" && !alreadyProcessed) {
+            if (kmAmount > 0 && (booking.status === "ACTIVE" || booking.status === "COMPLETED") && !alreadyProcessed) {
                 try {
                     await prisma.$transaction([
                         prisma.transaction.update({

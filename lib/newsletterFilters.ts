@@ -12,6 +12,7 @@ export type NewsletterFilters = {
 export function buildRecipientWhere(filters: NewsletterFilters): Prisma.UserWhereInput {
     const AND: Prisma.UserWhereInput[] = [
         { receivePromotionalEmails: true },
+        { role: { not: "ADMIN" } },
     ]
 
     // Booking activity filter

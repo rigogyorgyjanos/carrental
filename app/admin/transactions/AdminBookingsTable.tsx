@@ -79,9 +79,15 @@ const BTN_COLOR: Record<string, string> = {
 
 const FILTER_OPTIONS = ["ALL", "PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"]
 
-export default function AdminBookingsTable({ initialBookings }: { initialBookings: BookingRow[] }) {
+export default function AdminBookingsTable({
+    initialBookings,
+    initialFilter = "ALL",
+}: {
+    initialBookings: BookingRow[]
+    initialFilter?:  string
+}) {
     const [bookings,      setBookings]      = useState(initialBookings)
-    const [filter,        setFilter]        = useState("ALL")
+    const [filter,        setFilter]        = useState(initialFilter)
     const [loading,       setLoading]       = useState<string | null>(null)
     const [errorMsg,      setErrorMsg]      = useState("")
     const [mileageInput,  setMileageInput]  = useState<Record<string, string>>({})  // bookingId → km value

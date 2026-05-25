@@ -240,6 +240,7 @@ model Review {
   id        String   @id @default(cuid())
   rating    Int
   comment   String?  @db.Text
+  approved  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -250,6 +251,7 @@ model Review {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+  @@index([approved])
 }
 
 model NewsletterLog {

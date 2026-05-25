@@ -31,15 +31,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     const data = await req.json()
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        return NextResponse.json({ error: "Valid email required" }, { status: 400 })
+    }
+    const exists = await prisma.user.findUnique({ where: { email: data.email } })
+    if (exists) {
+        return NextResponse.json({ error: "Email already in use" }, { status: 409 })
+    }
     try {
         const newUser = await prisma.user.create({
             data: {
-                name:  data.name,
+                name:  data.name ?? null,
                 email: data.email,
                 role:  data.role ?? "USER",
                 xp:    0,
                 level: 1,
             },
+            select: { id: true, name: true, email: true, role: true, xp: true, level: true, createdAt: true },
         })
         return NextResponse.json(newUser)
     } catch (error) {

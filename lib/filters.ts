@@ -103,12 +103,13 @@ export function buildWhere(params: RawParams): Prisma.ProductWhereInput {
         })
     }
 
-    if (startDate && endDate) {
+    if (startDate && endDate && startDate <= endDate) {
         AND.push({
             transactions: {
                 none: {
+                    status:    { in: ["PENDING", "CONFIRMED", "ACTIVE"] },
                     startDate: { lte: endDate },
-                    endDate: { gte: startDate }
+                    endDate:   { gte: startDate },
                 }
             }
         })
