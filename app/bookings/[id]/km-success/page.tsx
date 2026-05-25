@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+
 interface Props {
     params:       Promise<{ id: string }>
     searchParams: Promise<{ payment?: string; km?: string }>

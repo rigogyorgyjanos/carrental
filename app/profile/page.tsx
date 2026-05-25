@@ -9,6 +9,8 @@ import ProfileActions from "./ProfileActions"
 import DeleteAccountButton from "./DeleteAccountButton"
 import ProfileSettings from "@/components/ProfileSettings"
 
+export const dynamic = "force-dynamic"
+
 // ── Tier helpers ───────────────────────────────────────────────────────────
 function getTierInfo(xp: number) {
     for (let i = TIERS.length - 1; i >= 0; i--) {

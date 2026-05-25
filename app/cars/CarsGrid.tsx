@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Car } from "@/types/types"
 import { getXpPerDay } from "@/lib/tiers"
 
@@ -12,6 +13,9 @@ interface Props {
 
 export default function CarsGrid({ initialCars }: Props) {
     const [cars, setCars] = useState<Car[]>(initialCars)
+    const searchParams    = useSearchParams()
+    const from = searchParams.get("from")
+    const to   = searchParams.get("to")
 
     // Small debounce so filter transitions don't flash stale results
     useEffect(() => {
@@ -38,7 +42,7 @@ export default function CarsGrid({ initialCars }: Props) {
                 return (
                     <Link
                         key={car.id}
-                        href={`/cars/${car.id}`}
+                        href={`/cars/${car.id}${from || to ? `?${new URLSearchParams({ ...(from ? { from } : {}), ...(to ? { to } : {}) })}` : ""}`}
                         className="group relative bg-surface rounded-2xl overflow-hidden h-90 border border-surface-3 hover:border-gold/25 transition-all duration-300 card-glow cursor-pointer"
                     >
                         {/* Full-bleed image */}

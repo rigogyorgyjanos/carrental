@@ -16,18 +16,26 @@ interface Props {
     minimumRentalDays?: number | null
     dailyKmLimit?:      number | null
     excessKmFee?:       number | null
-    editBookingId?:     string        // when set: PUT mode, skip Stripe
-    serverUserXp?:      number        // fresh XP from server to avoid stale session
+    editBookingId?:     string
+    serverUserXp?:      number
+    initialFrom?:       string
+    initialTo?:         string
 }
 
 type BookingStatus = "idle" | "loading" | "error"
 
 const SERVICE_FEE = 10
 
-export default function BookingForm({ carId, pricePerDay, category = "", deposit, minimumRentalDays, dailyKmLimit, excessKmFee, editBookingId, serverUserXp }: Props) {
+export default function BookingForm({ carId, pricePerDay, category = "", deposit, minimumRentalDays, dailyKmLimit, excessKmFee, editBookingId, serverUserXp, initialFrom, initialTo }: Props) {
     const { data: session }                     = useSession()
     const router                                = useRouter()
-    const [range, setRange]                     = useState<any>()
+    const [range, setRange]                     = useState<any>(() => {
+        if (!initialFrom) return undefined
+        return {
+            from: new Date(initialFrom),
+            to:   initialTo ? new Date(initialTo) : undefined,
+        }
+    })
     const [hoverDate, setHoverDate]             = useState<Date | null>(null)
     const [bookedDates, setBookedDates]         = useState<Date[]>([])
     const [status, setStatus]                   = useState<BookingStatus>("idle")
@@ -207,6 +215,7 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
                 <DayPicker
                     mode="range"
                     numberOfMonths={1}
+                    defaultMonth={range?.from ?? new Date()}
                     selected={range}
                     onSelect={r => { setRange(r); if (status === "error") setStatus("idle") }}
                     disabled={[

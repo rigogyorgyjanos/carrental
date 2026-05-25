@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+
 // ── KPI card ───────────────────────────────────────────────────────────────
 function KpiCard({
     label, value, sub, color = "#C9A84C", href,

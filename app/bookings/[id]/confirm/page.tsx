@@ -6,6 +6,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { getXpForRental, getTier } from "@/lib/tiers"
 
+export const dynamic = "force-dynamic"
+
 const SERVICE_FEE = 10
 
 const STATUS_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {

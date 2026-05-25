@@ -64,8 +64,11 @@ function getHighlights(car: {
     return h.slice(0, 5)
 }
 
-export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
+export const dynamic = "force-dynamic"
+
+export default async function CarPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; to?: string }> }) {
     const { id } = await params
+    const { from: initialFrom, to: initialTo } = await searchParams
 
     const session = await getServerSession(authOptions)
     const userId  = session?.user?.id ?? null
@@ -331,6 +334,8 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
                                 dailyKmLimit={car.dailyKmLimit}
                                 excessKmFee={car.excessKmFee}
                                 serverUserXp={dbUser?.xp ?? 0}
+                                initialFrom={initialFrom}
+                                initialTo={initialTo}
                             />
                         </div>
                     </div>

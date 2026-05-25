@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 
+export const dynamic = "force-dynamic"
+
 interface Props {
     params: Promise<{ id: string }>
 }

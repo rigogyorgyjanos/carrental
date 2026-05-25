@@ -5,6 +5,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import BookingForm from "@/components/BookingForm"
 
+export const dynamic = "force-dynamic"
+
 interface Props {
     params: Promise<{ id: string }>
 }
