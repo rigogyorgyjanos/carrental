@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { stripe } from "@/lib/stripe"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
@@ -8,17 +9,50 @@ export const dynamic = "force-dynamic"
 
 interface Props {
     params:       Promise<{ id: string }>
-    searchParams: Promise<{ payment?: string; km?: string }>
+    searchParams: Promise<{ payment?: string; km?: string; session_id?: string }>
 }
 
 export default async function KmSuccessPage({ params, searchParams }: Props) {
     const session = await getServerSession(authOptions)
     if (!session?.user) redirect("/api/auth/signin")
 
-    const { id }             = await params
-    const { payment, km }    = await searchParams
-    const success            = payment === "success"
-    const kmAdded            = parseInt(km ?? "0", 10) || 0
+    const { id }                        = await params
+    const { payment, km, session_id }   = await searchParams
+    const success                       = payment === "success"
+    const kmAdded                       = parseInt(km ?? "0", 10) || 0
+
+    // ── Fallback: if the webhook hasn't processed this session yet, do it now ──
+    if (success && kmAdded > 0 && session_id) {
+        try {
+            const stripeSession = await stripe.checkout.sessions.retrieve(session_id)
+
+            if (stripeSession.payment_status === "paid") {
+                const already = await prisma.kmPurchase.findUnique({
+                    where: { stripeSessionId: session_id },
+                })
+
+                if (!already) {
+                    const pricePaid = (stripeSession.amount_total ?? 0) / 100
+                    await prisma.$transaction([
+                        prisma.transaction.update({
+                            where: { id },
+                            data:  { extraKmPurchased: { increment: kmAdded } },
+                        }),
+                        prisma.kmPurchase.create({
+                            data: {
+                                transactionId:  id,
+                                kmAmount:       kmAdded,
+                                pricePaid,
+                                stripeSessionId: session_id,
+                            },
+                        }),
+                    ])
+                }
+            }
+        } catch {
+            // Non-fatal — webhook may have already processed it or will do so shortly
+        }
+    }
 
     const booking = await prisma.transaction.findUnique({
         where: { id },

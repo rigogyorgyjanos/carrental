@@ -61,7 +61,7 @@ export async function POST(
                 quantity: 1,
             },
         ],
-        success_url: `${appUrl}/bookings/${bookingId}/km-success?payment=success&km=${kmPackage}`,
+        success_url: `${appUrl}/bookings/${bookingId}/km-success?payment=success&km=${kmPackage}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${appUrl}/bookings/${bookingId}/confirm`,
         metadata: {
             type:      "km_package",
