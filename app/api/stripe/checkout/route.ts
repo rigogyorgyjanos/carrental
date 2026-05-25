@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         ],
         success_url: `${appUrl}/bookings/${bookingId}/confirm?payment=success`,
         cancel_url:  `${appUrl}/bookings/${bookingId}/payment-cancel`,
-        metadata: { bookingId },
+        metadata: { bookingId, type: "deposit" },
     })
 
     // Store the session ID on the booking

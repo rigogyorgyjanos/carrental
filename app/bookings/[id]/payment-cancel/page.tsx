@@ -52,10 +52,10 @@ export default async function PaymentCancelPage({ params }: Props) {
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link
-                        href={`/cars/${booking.productId}`}
+                        href={`/bookings/${booking.id}/confirm`}
                         className="flex-1 text-center bg-gold hover:bg-gold-light text-dark font-body font-semibold py-4 rounded-xl text-sm transition-colors"
                     >
-                        Retry booking →
+                        Retry payment →
                     </Link>
                     <Link
                         href="/profile"

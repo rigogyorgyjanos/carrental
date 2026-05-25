@@ -16,13 +16,15 @@ interface Props {
     minimumRentalDays?: number | null
     dailyKmLimit?:      number | null
     excessKmFee?:       number | null
+    editBookingId?:     string        // when set: PUT mode, skip Stripe
+    serverUserXp?:      number        // fresh XP from server to avoid stale session
 }
 
 type BookingStatus = "idle" | "loading" | "error"
 
 const SERVICE_FEE = 10
 
-export default function BookingForm({ carId, pricePerDay, category = "", deposit, minimumRentalDays, dailyKmLimit, excessKmFee }: Props) {
+export default function BookingForm({ carId, pricePerDay, category = "", deposit, minimumRentalDays, dailyKmLimit, excessKmFee, editBookingId, serverUserXp }: Props) {
     const { data: session }                     = useSession()
     const router                                = useRouter()
     const [range, setRange]                     = useState<any>()
@@ -31,7 +33,8 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
     const [status, setStatus]                   = useState<BookingStatus>("idle")
     const [errorMsg, setErrorMsg]               = useState("")
 
-    const userXp      = session?.user?.xp ?? 0
+    // Prefer server-side XP (fresh from DB) over potentially stale session XP
+    const userXp      = serverUserXp ?? session?.user?.xp ?? 0
     const tier        = getTier(userXp)
     const discount    = tier.discount
     const xpPerDay    = getXpPerDay(category)
@@ -98,6 +101,7 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
 
     // ── Submit ───────────────────────────────────────────────────────────
     const handleBooking = async () => {
+        if (!session?.user) { setErrorMsg("Please sign in to make a booking"); return }
         if (!range?.from || !range?.to) { setErrorMsg("Please select check-in and check-out dates"); return }
         if (days < 1)                   { setErrorMsg("Minimum stay: 1 day"); return }
         if (minimumRentalDays && days < minimumRentalDays) {
@@ -109,11 +113,31 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
         setStatus("loading")
         setErrorMsg("")
 
-        // Step 1 — create the booking
+        const startDate = format(range.from, "yyyy-MM-dd")
+        const endDate   = format(range.to,   "yyyy-MM-dd")
+
+        // ── EDIT MODE (PUT) ──────────────────────────────────────────────
+        if (editBookingId) {
+            const res = await fetch(`/api/bookings/${editBookingId}`, {
+                method:  "PUT",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify({ startDate, endDate }),
+            })
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                setErrorMsg(data.error || "Update failed. Please try again.")
+                setStatus("error")
+                return
+            }
+            router.push(`/bookings/${editBookingId}/confirm`)
+            return
+        }
+
+        // ── CREATE MODE (POST) ───────────────────────────────────────────
         const bookingRes = await fetch("/api/bookings", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ productId: carId, startDate: format(range.from, "yyyy-MM-dd"), endDate: format(range.to, "yyyy-MM-dd") }),
+            body:    JSON.stringify({ productId: carId, startDate, endDate }),
         })
 
         if (!bookingRes.ok) {
@@ -136,8 +160,6 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
             const { url } = await checkoutRes.json()
             window.location.href = url
         } else {
-            // Checkout creation failed — still navigate to confirm page so the user
-            // can see their pending booking and retry payment later
             router.push(`/bookings/${booking.id}/confirm`)
         }
     }

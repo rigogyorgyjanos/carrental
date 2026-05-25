@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { completeBooking, ensureBadgesSeeded } from "@/lib/gamification"
+import { stripe } from "@/lib/stripe"
 
 // Valid forward-only transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -68,6 +69,16 @@ export async function PATCH(
             return NextResponse.json({ success: true, xpAwarded: result.xpAwarded, newBadges: result.newBadges })
         }
 
+        // CONFIRMED → CANCELLED: auto-refund if payment was collected
+        if (existing.status === "CONFIRMED" && newStatus === "CANCELLED" && existing.paymentIntentId) {
+            try {
+                await stripe.refunds.create({ payment_intent: existing.paymentIntentId })
+            } catch (err) {
+                console.error("Auto-refund on cancel failed:", err)
+                return NextResponse.json({ error: "Stripe refund failed — booking not cancelled" }, { status: 502 })
+            }
+        }
+
         // All other transitions — simple status update
         const updated = await prisma.transaction.update({
             where: { id },
@@ -77,8 +88,7 @@ export async function PATCH(
         return NextResponse.json(updated)
     } catch (error) {
         console.error("PATCH transaction error:", error)
-        const message = error instanceof Error ? error.message : "Unknown error"
-        return NextResponse.json({ error: `Status update failed: ${message}` }, { status: 500 })
+        return NextResponse.json({ error: "Status update failed" }, { status: 500 })
     }
 }
 
@@ -98,8 +108,11 @@ export async function GET(
 
     try {
         const tx = await prisma.transaction.findUnique({
-            where: { id },
-            include: { user: true, product: true },
+            where:   { id },
+            include: {
+                user:    { select: { id: true, name: true, email: true, image: true } },
+                product: true,
+            },
         })
         if (!tx) return NextResponse.json({ error: "Transaction not found" }, { status: 404 })
 
@@ -149,7 +162,15 @@ export async function PUT(
     if (!id) return NextResponse.json({ error: "Missing transaction ID" }, { status: 400 })
 
     const data = await req.json()
-    const { startDate, endDate, pricePerDay, deposit, status, notes, startMileage, endMileage } = data
+    // status is intentionally excluded — use PATCH for status transitions
+    const { startDate, endDate, pricePerDay, deposit, notes, startMileage, endMileage } = data
+
+    if (startDate != null && isNaN(new Date(startDate).getTime())) {
+        return NextResponse.json({ error: "Invalid startDate" }, { status: 400 })
+    }
+    if (endDate != null && isNaN(new Date(endDate).getTime())) {
+        return NextResponse.json({ error: "Invalid endDate" }, { status: 400 })
+    }
 
     try {
         const existing = await prisma.transaction.findUnique({
@@ -160,20 +181,18 @@ export async function PUT(
 
         const start = startDate ? new Date(startDate) : existing.startDate
         const end   = endDate   ? new Date(endDate)   : existing.endDate
-        // Inclusive count: same day = 1 day, three-day rental = 3
         const days  = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
         if (days < 1) return NextResponse.json({ error: "Invalid rental period" }, { status: 400 })
 
         const updated = await prisma.transaction.update({
             where: { id },
             data: {
-                startDate: start,
-                endDate: end,
-                totalDays: days,
-                pricePerDay: pricePerDay ?? existing.pricePerDay,
-                totalPrice: (pricePerDay ?? existing.pricePerDay) * days,
-                deposit: deposit ?? existing.deposit,
-                status:       status       ?? existing.status,
+                startDate:    start,
+                endDate:      end,
+                totalDays:    days,
+                pricePerDay:  pricePerDay ?? existing.pricePerDay,
+                totalPrice:   (pricePerDay ?? existing.pricePerDay) * days,
+                deposit:      deposit      ?? existing.deposit,
                 notes:        notes        ?? existing.notes,
                 startMileage: startMileage != null ? Number(startMileage) : existing.startMileage,
                 endMileage:   endMileage   != null ? Number(endMileage)   : existing.endMileage,

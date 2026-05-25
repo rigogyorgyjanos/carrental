@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { getXpForRental, getTier } from "@/lib/tiers"
 
 const SERVICE_FEE = 10
@@ -103,11 +104,13 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
                 {/* ── Car card ──────────────────────────────────────── */}
                 <div className="bg-surface border border-surface-3 rounded-2xl overflow-hidden mb-5">
                     {coverImage && (
-                        <div className="h-52 overflow-hidden">
-                            <img
+                        <div className="relative h-52 overflow-hidden">
+                            <Image
                                 src={coverImage}
                                 alt={booking.product.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                sizes="(max-width: 672px) 100vw, 672px"
+                                className="object-cover"
                             />
                         </div>
                     )}

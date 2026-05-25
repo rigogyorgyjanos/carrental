@@ -76,20 +76,12 @@ export default async function KmSuccessPage({ params, searchParams }: Props) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Link
-                        href="/profile"
-                        className="flex-1 text-center bg-gold hover:bg-gold-light text-dark font-body font-semibold py-4 rounded-xl text-sm transition-colors"
-                    >
-                        Back to profile
-                    </Link>
-                    <Link
-                        href={`/bookings/${id}/confirm`}
-                        className="flex-1 text-center bg-surface border border-surface-3 hover:border-gold/30 text-white-soft font-body font-semibold py-4 rounded-xl text-sm transition-colors"
-                    >
-                        View booking
-                    </Link>
-                </div>
+                <Link
+                    href="/profile"
+                    className="block w-full text-center bg-gold hover:bg-gold-light text-dark font-body font-semibold py-4 rounded-xl text-sm transition-colors"
+                >
+                    Back to profile
+                </Link>
 
                 <p className="text-muted-2 text-[11px] font-stats">
                     Booking reference: <span className="text-muted">{id}</span>

@@ -70,6 +70,11 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
     const session = await getServerSession(authOptions)
     const userId  = session?.user?.id ?? null
 
+    // Fetch fresh XP from DB to avoid stale session discount in BookingForm
+    const dbUser = userId
+        ? await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } })
+        : null
+
     const [car, reviews] = await Promise.all([
         prisma.product.findUnique({
             where: { id },
@@ -325,6 +330,7 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
                                 minimumRentalDays={car.minimumRentalDays}
                                 dailyKmLimit={car.dailyKmLimit}
                                 excessKmFee={car.excessKmFee}
+                                serverUserXp={dbUser?.xp ?? 0}
                             />
                         </div>
                     </div>

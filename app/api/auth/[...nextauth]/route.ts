@@ -13,12 +13,10 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            allowDangerousEmailAccountLinking: true,
         }),
-        AppleProvider({
-            clientId: process.env.APPLE_ID!,
-            clientSecret: process.env.APPLE_SECRET!
-        }),
+        ...(process.env.APPLE_ID && process.env.APPLE_SECRET
+            ? [AppleProvider({ clientId: process.env.APPLE_ID, clientSecret: process.env.APPLE_SECRET })]
+            : []),
         CredentialsProvider({
             name: "credentials",
             credentials: { email: {}, password: {} },
@@ -43,15 +41,22 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.id   = user.id
-                token.role = (user as { role?: string }).role ?? "USER"
+                token.id          = user.id
+                token.role        = (user as { role?: string }).role ?? "USER"
+                token.xpUpdatedAt = 0 // force immediate refresh on first call
+            }
 
+            // Refresh XP/level from DB every 5 minutes to keep discount accurate
+            const now = Date.now()
+            const stale = !token.xpUpdatedAt || (now - (token.xpUpdatedAt as number)) > 5 * 60 * 1000
+            if (token.id && stale) {
                 const dbUser = await prisma.user.findUnique({
-                    where:  { id: user.id },
+                    where:  { id: token.id as string },
                     select: { xp: true, level: true },
                 })
-                token.xp    = dbUser?.xp    ?? 0
-                token.level = dbUser?.level ?? 1
+                token.xp          = dbUser?.xp    ?? 0
+                token.level       = dbUser?.level ?? 1
+                token.xpUpdatedAt = now
             }
             return token
         },
@@ -69,8 +74,7 @@ export const authOptions: NextAuthOptions = {
         async signIn({ user, account, profile }) {
             if (account?.provider === "google") {
                 if (!user.email) return false
-                // @ts-ignore
-                if (profile && !profile.email_verified) return false
+                if ((profile as { email_verified?: boolean })?.email_verified === false) return false
                 return true
             }
             return true

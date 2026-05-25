@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 
 interface CarImage {
     id: string
@@ -16,16 +17,42 @@ export default function CarGallery({ images, carName }: Props) {
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [activeIndex, setActiveIndex] = useState(0)
     const [touchStart, setTouchStart] = useState<number | null>(null)
+    const closeBtnRef  = useRef<HTMLButtonElement>(null)
+    const triggerRef   = useRef<HTMLButtonElement>(null)
 
     const total = images.length
 
-    // ── Keyboard navigation ──────────────────────────────────────────────
+    // ── Focus management: move focus into lightbox on open, restore on close ──
+    useEffect(() => {
+        if (lightboxOpen) {
+            closeBtnRef.current?.focus()
+        } else {
+            triggerRef.current?.focus()
+        }
+    }, [lightboxOpen])
+
+    // ── Keyboard navigation + focus trap ────────────────────────────────────
     useEffect(() => {
         if (!lightboxOpen) return
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape")      setLightboxOpen(false)
             if (e.key === "ArrowLeft")   goTo((activeIndex - 1 + total) % total)
             if (e.key === "ArrowRight")  goTo((activeIndex + 1) % total)
+            // Trap Tab within the lightbox overlay
+            if (e.key === "Tab") {
+                const overlay = document.getElementById("lightbox-overlay")
+                if (!overlay) return
+                const focusable = overlay.querySelectorAll<HTMLElement>(
+                    "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
+                )
+                const first = focusable[0]
+                const last  = focusable[focusable.length - 1]
+                if (e.shiftKey) {
+                    if (document.activeElement === first) { e.preventDefault(); last.focus() }
+                } else {
+                    if (document.activeElement === last)  { e.preventDefault(); first.focus() }
+                }
+            }
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
@@ -85,14 +112,17 @@ export default function CarGallery({ images, carName }: Props) {
                 {total === 1 ? (
                     /* Single image — full width */
                     <button
-                        className="w-full h-full block overflow-hidden"
+                        ref={triggerRef}
+                        className="relative w-full h-full block overflow-hidden"
                         onClick={() => openLightbox(0)}
                         aria-label="View photo"
                     >
-                        <img
+                        <Image
                             src={main.url}
                             alt={carName}
-                            className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-700"
+                            fill
+                            sizes="100vw"
+                            className="object-cover hover:scale-[1.03] transition-transform duration-700"
                         />
                     </button>
 
@@ -105,14 +135,16 @@ export default function CarGallery({ images, carName }: Props) {
                     >
                         {/* Main image */}
                         <button
-                            className={`overflow-hidden ${total >= 3 ? "row-span-2" : ""}`}
+                            className={`relative overflow-hidden ${total >= 3 ? "row-span-2" : ""}`}
                             onClick={() => openLightbox(0)}
                             aria-label="View main photo"
                         >
-                            <img
+                            <Image
                                 src={main.url}
                                 alt={carName}
-                                className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-700 cursor-pointer"
+                                fill
+                                sizes="(max-width: 768px) 100vw, 66vw"
+                                className="object-cover hover:scale-[1.03] transition-transform duration-700 cursor-pointer"
                             />
                         </button>
 
@@ -124,10 +156,12 @@ export default function CarGallery({ images, carName }: Props) {
                                 onClick={() => openLightbox(i + 1)}
                                 aria-label={`View photo ${i + 2}`}
                             >
-                                <img
+                                <Image
                                     src={img.url}
                                     alt={`${carName} ${i + 2}`}
-                                    className="w-full h-full object-cover hover:scale-[1.05] transition-transform duration-500 cursor-pointer"
+                                    fill
+                                    sizes="(max-width: 768px) 50vw, 33vw"
+                                    className="object-cover hover:scale-[1.05] transition-transform duration-500 cursor-pointer"
                                 />
                                 {/* "+N more" overlay on last secondary image */}
                                 {i === right.length - 1 && extra > 0 && (
@@ -157,6 +191,10 @@ export default function CarGallery({ images, carName }: Props) {
             {/* ── Lightbox ──────────────────────────────────────────────── */}
             {lightboxOpen && (
                 <div
+                    id="lightbox-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${carName} photo gallery`}
                     className="fixed inset-0 z-[100] bg-black/96 flex items-center justify-center"
                     onClick={e => { if (e.target === e.currentTarget) setLightboxOpen(false) }}
                     onTouchStart={handleTouchStart}
@@ -164,9 +202,10 @@ export default function CarGallery({ images, carName }: Props) {
                 >
                     {/* Close */}
                     <button
+                        ref={closeBtnRef}
                         onClick={() => setLightboxOpen(false)}
                         className="absolute top-5 right-5 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-surface/80 border border-surface-3 text-muted hover:text-white-soft transition-colors"
-                        aria-label="Close"
+                        aria-label="Close gallery"
                     >
                         ✕
                     </button>
@@ -218,7 +257,7 @@ export default function CarGallery({ images, carName }: Props) {
                                     }`}
                                     aria-label={`Go to photo ${i + 1}`}
                                 >
-                                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                    <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
                                 </button>
                             ))}
                         </div>

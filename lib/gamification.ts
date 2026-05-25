@@ -135,13 +135,14 @@ export async function awardXP(userId: string, xpAmount: number, transactionId?: 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } })
     if (!user) return
 
-    const newXp    = user.xp + xpAmount
-    const newLevel = getLevel(newXp)
+    // Use increment for xp to be atomic under concurrent calls.
+    // Level is calculated from estimated new total — minor race on level is acceptable.
+    const newLevel = getLevel(user.xp + xpAmount)
 
     await prisma.$transaction([
         prisma.user.update({
             where: { id: userId },
-            data: { xp: newXp, level: newLevel },
+            data: { xp: { increment: xpAmount }, level: newLevel },
         }),
         prisma.xpTransaction.create({
             data: { userId, xpAmount, transactionId },
@@ -175,8 +176,11 @@ export async function checkAllBadges(userId: string): Promise<string[]> {
     return newBadges
 }
 
-// ── Seed badges into DB (idempotent) ──────────────────────────────────────
+// ── Seed badges into DB (idempotent, runs once per process) ───────────────
+let _badgesSeeded = false
+
 export async function ensureBadgesSeeded() {
+    if (_badgesSeeded) return
     for (const def of BADGE_DEFS) {
         await prisma.badge.upsert({
             where: { slug: def.slug },
@@ -184,6 +188,7 @@ export async function ensureBadgesSeeded() {
             create: { slug: def.slug, name: def.name, description: def.description, icon: def.icon },
         })
     }
+    _badgesSeeded = true
 }
 
 // ── Complete a booking: award XP + check badges ───────────────────────────
@@ -197,25 +202,48 @@ export async function completeBooking(bookingId: string): Promise<{
         include: { product: true },
     })
 
-    if (!booking)                        return { xpAwarded: 0, newBadges: [], error: "Booking not found" }
-    if (booking.status === "CANCELLED")  return { xpAwarded: 0, newBadges: [], error: "Booking is cancelled" }
-    if (booking.status === "COMPLETED")  return { xpAwarded: 0, newBadges: [], error: "Already completed" }
+    if (!booking)                         return { xpAwarded: 0, newBadges: [], error: "Booking not found" }
+    if (booking.status === "CANCELLED")   return { xpAwarded: 0, newBadges: [], error: "Booking is cancelled" }
+    if (booking.status === "COMPLETED")   return { xpAwarded: 0, newBadges: [], error: "Already completed" }
+    if (booking.status !== "ACTIVE")      return { xpAwarded: 0, newBadges: [], error: "Booking must be ACTIVE to complete" }
 
     const xpAmount = getXpForRental(booking.product.category, booking.totalDays)
 
-    // Atomic update — only succeeds if status hasn't changed since we read above.
-    // Prevents XP being awarded twice when admin and cron overlap.
-    const updated = await prisma.transaction.updateMany({
-        where: { id: bookingId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
-        data:  { status: "COMPLETED", xpAwarded: xpAmount },
+    // Read current XP for level calculation before the transaction (minor level race
+    // is acceptable; XP increment itself is atomic via { increment }).
+    const currentUser = await prisma.user.findUnique({
+        where:  { id: booking.userId },
+        select: { xp: true },
+    })
+    const newLevel = getLevel((currentUser?.xp ?? 0) + xpAmount)
+
+    // Single atomic transaction: mark COMPLETED + award XP.
+    // If the server crashes between the two writes no longer possible.
+    let alreadyCompleted = false
+    await prisma.$transaction(async (tx) => {
+        const updated = await tx.transaction.updateMany({
+            where: { id: bookingId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+            data:  { status: "COMPLETED", xpAwarded: xpAmount },
+        })
+
+        if (updated.count === 0) {
+            alreadyCompleted = true
+            return
+        }
+
+        await tx.user.update({
+            where: { id: booking.userId },
+            data:  { xp: { increment: xpAmount }, level: newLevel },
+        })
+        await tx.xpTransaction.create({
+            data: { userId: booking.userId, xpAmount, transactionId: bookingId },
+        })
     })
 
-    if (updated.count === 0) {
+    if (alreadyCompleted) {
         return { xpAwarded: 0, newBadges: [], error: "Already completed" }
     }
 
-    await awardXP(booking.userId, xpAmount, bookingId)
     const newBadges = await checkAllBadges(booking.userId)
-
     return { xpAwarded: xpAmount, newBadges }
 }

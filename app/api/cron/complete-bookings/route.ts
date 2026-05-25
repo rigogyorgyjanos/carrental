@@ -4,8 +4,7 @@ import { completeBooking, ensureBadgesSeeded } from "@/lib/gamification"
 
 const CRON_SECRET = process.env.CRON_SECRET
 
-export async function POST(req: NextRequest) {
-    // CRON_SECRET is required — if not set, the endpoint is locked down entirely
+async function handleCron(req: NextRequest): Promise<NextResponse> {
     if (!CRON_SECRET) {
         console.error("[cron] CRON_SECRET env var is not set — endpoint disabled")
         return NextResponse.json({ error: "Endpoint not configured" }, { status: 503 })
@@ -36,3 +35,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ processed: overdue.length, completed, failed })
 }
+
+// Vercel Cron sends GET; POST kept for manual triggers
+export async function GET(req: NextRequest)  { return handleCron(req) }
+export async function POST(req: NextRequest) { return handleCron(req) }

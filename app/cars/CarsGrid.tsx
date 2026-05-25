@@ -1,16 +1,10 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { Car } from "@/types/types"
-
-function getXpPerDay(category: string): number {
-    const c = category.toLowerCase()
-    if (c.includes("super") || c.includes("hyper")) return 30
-    if (c.includes("luxury") || c.includes("sport")) return 20
-    if (c.includes("premium"))                        return 15
-    return 10
-}
+import { getXpPerDay } from "@/lib/tiers"
 
 interface Props {
     initialCars: Car[]
@@ -48,10 +42,12 @@ export default function CarsGrid({ initialCars }: Props) {
                         className="group relative bg-surface rounded-2xl overflow-hidden h-90 border border-surface-3 hover:border-gold/25 transition-all duration-300 card-glow cursor-pointer"
                     >
                         {/* Full-bleed image */}
-                        <img
+                        <Image
                             src={imageUrl}
                             alt={car.name}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
 
                         {/* Always-on bottom gradient */}

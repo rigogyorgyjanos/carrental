@@ -105,7 +105,7 @@ export async function PUT(
     }
 }
 
-// --- PATCH (active toggle or partial update) ---
+// --- PATCH (active/featured toggle only) ---
 export async function PATCH(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
@@ -116,12 +116,15 @@ export async function PATCH(
     const { id } = await context.params
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-    const data = await req.json()
+    const body = await req.json()
+    const patch: { active?: boolean; featured?: boolean } = {}
+    if (body.active   !== undefined) patch.active   = Boolean(body.active)
+    if (body.featured !== undefined) patch.featured = Boolean(body.featured)
+    if (Object.keys(patch).length === 0)
+        return NextResponse.json({ error: "No valid fields to update" }, { status: 400 })
+
     try {
-        const updated = await prisma.product.update({
-            where: { id },
-            data,
-        })
+        const updated = await prisma.product.update({ where: { id }, data: patch })
         return NextResponse.json(updated)
     } catch (error) {
         console.error("PATCH car error:", error)

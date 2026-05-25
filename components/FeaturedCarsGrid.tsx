@@ -1,18 +1,12 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Car } from "@/types/types"
+import { getXpPerDay } from "@/lib/tiers"
 
 interface Props {
     initialCars: Car[]
-}
-
-function getXpPerDay(category: string): number {
-    const c = category.toLowerCase()
-    if (c.includes("super") || c.includes("hyper")) return 30
-    if (c.includes("luxury") || c.includes("sport")) return 20
-    if (c.includes("premium"))                        return 15
-    return 10
 }
 
 export default function FeaturedCarsGrid({ initialCars }: Props) {
@@ -38,10 +32,12 @@ export default function FeaturedCarsGrid({ initialCars }: Props) {
                     >
                         {/* Image */}
                         <div className="relative h-56 overflow-hidden">
-                            <img
+                            <Image
                                 src={imageUrl}
                                 alt={car.name}
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                fill
+                                sizes="(max-width: 768px) 100vw, 33vw"
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
                             />
 
                             {/* Bottom gradient */}

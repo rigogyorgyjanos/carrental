@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { getTierDiscount, getTier, getXpForRental } from "@/lib/tiers"
+
+const SERVICE_FEE = 10
 import { sendMail } from "@/lib/nodemailer"
 import { bookingConfirmationHtml } from "@/lib/emails/bookingConfirmation"
 
@@ -79,8 +81,8 @@ export async function POST(req: NextRequest) {
         })
         const discount      = getTierDiscount(dbUser?.xp ?? 0)
         const basePrice     = totalDays * product.pricePerDay
-        const totalPrice    = basePrice * (1 - discount)
-        const deposit       = product.deposit ?? totalPrice * 0.2
+        const totalPrice    = Math.round((basePrice * (1 - discount) + SERVICE_FEE) * 100) / 100
+        const deposit       = product.deposit ?? Math.round(totalPrice * 0.2 * 100) / 100
 
         // ── Overlap check + create inside a Serializable transaction ─────────
         // Serializable isolation prevents two concurrent requests from both

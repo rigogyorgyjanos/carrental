@@ -2,21 +2,38 @@
 
 import { signIn } from "next-auth/react"
 import { useEffect, useState, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import ForgotPasswordModal from "@/components/ForgotPasswordModal"
 import ResetPasswordModal from "@/components/ResetPasswordModal"
 
+function EyeIcon({ open }: { open: boolean }) {
+    return open ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+    )
+}
+
 function LoginContent() {
     const searchParams = useSearchParams()
-    const error = searchParams.get("error")
-    const resetToken = searchParams.get("token")
+    const router       = useRouter()
+    const resetToken   = searchParams.get("token")
 
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [loading, setLoading] = useState(false)
+    const [email,       setEmail]       = useState("")
+    const [password,    setPassword]    = useState("")
+    const [showPass,    setShowPass]    = useState(false)
+    const [loading,     setLoading]     = useState(false)
+    const [loginError,  setLoginError]  = useState("")
 
     const [isForgotOpen, setForgotOpen] = useState(false)
-    const [isResetOpen, setResetOpen] = useState(false)
+    const [isResetOpen,  setResetOpen]  = useState(false)
 
     useEffect(() => {
         if (resetToken) setResetOpen(true)
@@ -25,15 +42,20 @@ function LoginContent() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true)
+        setLoginError("")
 
-        await signIn("credentials", {
+        const result = await signIn("credentials", {
             email,
             password,
-            redirect: true,
-            callbackUrl: "/",
+            redirect: false,
         })
 
-        setLoading(false)
+        if (result?.error) {
+            setLoginError("Invalid email or password. Please try again.")
+            setLoading(false)
+        } else {
+            router.push("/")
+        }
     }
 
     const handleSocialLogin = async (provider: "google") => {
@@ -57,9 +79,9 @@ function LoginContent() {
                 <div className="bg-surface border border-surface-3 rounded-2xl p-8 shadow-2xl">
 
                     {/* Error */}
-                    {error && (
+                    {loginError && (
                         <div className="mb-5 text-xs text-danger font-stats text-center bg-danger/8 border border-danger/20 rounded-xl px-4 py-3">
-                            Invalid email or password
+                            {loginError}
                         </div>
                     )}
 
@@ -87,23 +109,41 @@ function LoginContent() {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <input
-                            type="email"
-                            placeholder="Email address"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            required
-                            className="w-full bg-surface-2 border border-surface-3 text-white-soft text-sm font-body placeholder:text-muted rounded-xl px-4 py-3 focus:outline-none focus:border-gold/40 transition-colors"
-                        />
+                        <div>
+                            <label htmlFor="login-email" className="sr-only">Email address</label>
+                            <input
+                                id="login-email"
+                                type="email"
+                                placeholder="Email address"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                required
+                                autoComplete="email"
+                                className="w-full bg-surface-2 border border-surface-3 text-white-soft text-sm font-body placeholder:text-muted rounded-xl px-4 py-3 focus:outline-none focus:border-gold/40 transition-colors"
+                            />
+                        </div>
 
-                        <input
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            required
-                            className="w-full bg-surface-2 border border-surface-3 text-white-soft text-sm font-body placeholder:text-muted rounded-xl px-4 py-3 focus:outline-none focus:border-gold/40 transition-colors"
-                        />
+                        <div className="relative">
+                            <label htmlFor="login-password" className="sr-only">Password</label>
+                            <input
+                                id="login-password"
+                                type={showPass ? "text" : "password"}
+                                placeholder="Password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                                className="w-full bg-surface-2 border border-surface-3 text-white-soft text-sm font-body placeholder:text-muted rounded-xl px-4 py-3 pr-11 focus:outline-none focus:border-gold/40 transition-colors"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPass(v => !v)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-gold transition-colors p-1"
+                                aria-label={showPass ? "Hide password" : "Show password"}
+                            >
+                                <EyeIcon open={showPass} />
+                            </button>
+                        </div>
 
                         <div className="flex justify-end -mt-1">
                             <button

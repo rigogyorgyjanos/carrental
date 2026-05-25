@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 
 const NAV = [
-    { href: "/admin",              label: "Dashboard" },
-    { href: "/admin/transactions", label: "Bookings"  },
-    { href: "/admin/cars",         label: "Cars"      },
-    { href: "/admin/users",        label: "Users"     },
+    { href: "/admin",              label: "Dashboard"  },
+    { href: "/admin/transactions", label: "Bookings"   },
+    { href: "/admin/cars",         label: "Cars"       },
+    { href: "/admin/users",        label: "Users"      },
+    { href: "/admin/newsletter",   label: "Newsletter" },
 ]
 
 export default function AdminNavbar() {

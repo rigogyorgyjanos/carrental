@@ -20,7 +20,10 @@ export async function GET(
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
     try {
-        const user = await prisma.user.findUnique({ where: { id } })
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { id: true, name: true, email: true, role: true, xp: true, level: true, image: true, createdAt: true, receivePromotionalEmails: true, showOnLeaderboard: true },
+        })
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
         return NextResponse.json(user)
     } catch (error) {
@@ -58,6 +61,7 @@ export async function PUT(
                 xp:    xp    != null ? Number(xp)    : undefined,
                 level: level != null ? Number(level) : undefined,
             },
+            select: { id: true, name: true, email: true, role: true, xp: true, level: true, image: true, createdAt: true },
         })
         return NextResponse.json(updated)
     } catch (error) {
@@ -70,11 +74,16 @@ export async function DELETE(
     _req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
-    if (!await requireAdmin()) {
+    const session = await requireAdmin()
+    if (!session) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     const { id } = await context.params
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
+
+    if (id === session.user.id) {
+        return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 })
+    }
 
     try {
         await prisma.user.delete({ where: { id } })

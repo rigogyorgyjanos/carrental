@@ -14,7 +14,11 @@ export async function GET() {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     try {
-        const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 200 })
+        const users = await prisma.user.findMany({
+            orderBy: { createdAt: "desc" },
+            take: 200,
+            select: { id: true, name: true, email: true, role: true, xp: true, level: true, image: true, createdAt: true, receivePromotionalEmails: true, showOnLeaderboard: true },
+        })
         return NextResponse.json(users)
     } catch (error) {
         console.error("GET users error:", error)

@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DM_Sans, Space_Grotesk } from "next/font/google"
 import SessionProviderWrapper from "./SessionProviderWrapper"
 import Navbar from "@/components/Navbar"
 import CookieConsent from "@/components/CookieConsent"
+import NavigationLoader from "@/components/NavigationLoader"
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${cormorant.variable} ${dmSans.variable} ${spaceGrotesk.variable} font-body bg-dark text-white-soft`}>
         <SessionProviderWrapper>
+          <NavigationLoader />
           <Navbar />
           {children}
           <CookieConsent />

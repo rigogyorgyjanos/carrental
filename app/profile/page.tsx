@@ -3,9 +3,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { TIERS, BADGE_DEFS, ensureBadgesSeeded } from "@/lib/gamification"
 import ProfileActions from "./ProfileActions"
 import DeleteAccountButton from "./DeleteAccountButton"
+import ProfileSettings from "@/components/ProfileSettings"
 
 // ── Tier helpers ───────────────────────────────────────────────────────────
 function getTierInfo(xp: number) {
@@ -133,10 +135,12 @@ export default async function ProfilePage() {
                     {/* Avatar */}
                     <div className="relative shrink-0">
                         {user.image ? (
-                            <img
+                            <Image
                                 src={user.image}
                                 alt={user.name ?? ""}
-                                className="w-24 h-24 rounded-full object-cover"
+                                width={96}
+                                height={96}
+                                className="rounded-full object-cover"
                                 style={{ outline: `3px solid ${tier.color}`, outlineOffset: "3px" }}
                             />
                         ) : (
@@ -187,6 +191,12 @@ export default async function ProfilePage() {
                 <div className="flex justify-end">
                     <DeleteAccountButton />
                 </div>
+
+                {/* ── Settings ────────────────────────────────────────── */}
+                <ProfileSettings
+                    initialShowOnLeaderboard={user.showOnLeaderboard}
+                    initialReceivePromotionalEmails={user.receivePromotionalEmails}
+                />
 
                 {/* ── Tier card ───────────────────────────────────────── */}
                 <div

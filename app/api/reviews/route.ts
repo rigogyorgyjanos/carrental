@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { awardXP, checkAllBadges, ensureBadgesSeeded } from "@/lib/gamification"
+import { checkAllBadges, ensureBadgesSeeded } from "@/lib/gamification"
+import { getLevel } from "@/lib/tiers"
 
 const REVIEW_XP = 25
 
@@ -47,7 +48,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "You have already reviewed this vehicle" }, { status: 409 })
     }
 
-    // Create review + recalculate product rating in one transaction
+    // Read current XP for level calculation before the transaction
+    const currentUser = await prisma.user.findUnique({
+        where:  { id: session.user.id },
+        select: { xp: true },
+    })
+    const newLevel = getLevel((currentUser?.xp ?? 0) + REVIEW_XP)
+
+    // Create review + recalculate product rating + award XP — all atomic
     const review = await prisma.$transaction(async tx => {
         const created = await tx.review.create({
             data: {
@@ -73,12 +81,18 @@ export async function POST(req: NextRequest) {
             },
         })
 
+        await tx.user.update({
+            where: { id: session.user.id },
+            data:  { xp: { increment: REVIEW_XP }, level: newLevel },
+        })
+        await tx.xpTransaction.create({
+            data: { userId: session.user.id, xpAmount: REVIEW_XP },
+        })
+
         return created
     })
 
-    // Award XP + check badges (non-blocking)
     await ensureBadgesSeeded()
-    await awardXP(session.user.id, REVIEW_XP)
     await checkAllBadges(session.user.id)
 
     return NextResponse.json({ review, xpAwarded: REVIEW_XP }, { status: 201 })

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
@@ -128,11 +129,13 @@ export default async function LandingPage() {
             <section className="-mt-18 relative min-h-screen flex flex-col items-center justify-center text-white overflow-hidden">
 
                 {/* Background image */}
-                <img
+                <Image
                     src={HERO_IMAGE}
                     alt=""
-                    aria-hidden
-                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover object-center"
                 />
 
                 {/* Dark base overlay */}

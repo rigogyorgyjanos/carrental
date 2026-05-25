@@ -6,8 +6,9 @@ import { useState, useEffect } from "react"
 import { getTier } from "@/lib/tiers"
 
 const NAV_LINKS = [
-    { label: "Home", href: "/" },
-    { label: "Cars", href: "/cars" },
+    { label: "Home",        href: "/" },
+    { label: "Cars",        href: "/cars" },
+    { label: "Leaderboard", href: "/leaderboard" },
 ]
 
 export default function Navbar() {
@@ -135,6 +136,7 @@ export default function Navbar() {
                             onClick={() => setOpen(prev => !prev)}
                             aria-label={open ? "Close menu" : "Open menu"}
                             aria-expanded={open}
+                            aria-controls="mobile-nav"
                         >
                             <span
                                 className={`block h-px w-5 bg-white-soft transition-all duration-300 ${
@@ -158,6 +160,7 @@ export default function Navbar() {
 
                 {/* ── Mobile Menu ── */}
                 <div
+                    id="mobile-nav"
                     className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
                         open ? "max-h-120 opacity-100" : "max-h-0 opacity-0"
                     }`}
