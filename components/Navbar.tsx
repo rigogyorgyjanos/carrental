@@ -12,7 +12,7 @@ const NAV_LINKS = [
 ]
 
 export default function Navbar() {
-    const { data: session } = useSession({ refetchInterval: 120 })
+    const { data: session } = useSession()
     const [open, setOpen] = useState(false)
     const [scrolled, setScrolled] = useState(false)
 
