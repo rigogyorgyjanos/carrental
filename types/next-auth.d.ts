@@ -7,6 +7,7 @@ declare module "next-auth" {
             role?: string
             xp?: number
             level?: number
+            companyId?: string | null
         } & DefaultSession["user"]
     }
 
@@ -15,6 +16,7 @@ declare module "next-auth" {
         role?: string
         xp?: number
         level?: number
+        companyId?: string | null
     }
 }
 
@@ -24,5 +26,6 @@ declare module "next-auth/jwt" {
         role: string
         xp?: number
         level?: number
+        companyId?: string | null
     }
 }

@@ -94,7 +94,7 @@ export default async function LandingPage() {
     const session = await getServerSession(authOptions)
 
     const featuredCarsRaw = await prisma.product.findMany({
-        where: { featured: true },
+        where: { featured: true, active: true, approvalStatus: "APPROVED" },
         take: 3,
         include: { images: true },
     })

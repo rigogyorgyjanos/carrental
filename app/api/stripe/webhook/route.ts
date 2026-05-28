@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe"
 import Stripe from "stripe"
 import { sendMail } from "@/lib/nodemailer"
 import { kmPurchaseConfirmationHtml } from "@/lib/emails/kmPurchaseConfirmation"
+import { audit } from "@/lib/audit"
 
 export async function POST(req: NextRequest) {
     const body = await req.text()
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
                 product: { select: { brand: true, name: true, dailyKmLimit: true } },
             },
         })
+        // booking fields used below: status, totalDays, extraKmPurchased, excessKmPaid, paymentIntentId
         if (!booking) {
             console.error("Webhook: booking not found", bookingId)
             return NextResponse.json({ received: true })
@@ -73,10 +75,23 @@ export async function POST(req: NextRequest) {
                     throw err
                 }
 
+                // Fetch fresh extraKmPurchased after increment for accurate email total
+                const freshBooking = await prisma.transaction.findUnique({
+                    where:  { id: bookingId },
+                    select: { extraKmPurchased: true },
+                })
+                audit({
+                    action:    "payment.km_purchased",
+                    entity:    "booking",
+                    entityId:  bookingId,
+                    userId:    null,
+                    metadata:  { kmAmount, pricePaid, stripeSessionId: session.id },
+                })
+
                 const userEmail = booking.user.email
                 if (userEmail) {
                     const totalKm = (booking.product.dailyKmLimit ?? 0) * booking.totalDays
-                        + booking.extraKmPurchased + kmAmount
+                        + (freshBooking?.extraKmPurchased ?? kmAmount)
                     const appUrl  = process.env.NEXTAUTH_URL ?? "http://localhost:3000"
                     await sendMail({
                         to:      userEmail,
@@ -95,6 +110,41 @@ export async function POST(req: NextRequest) {
                     })
                 }
             }
+        } else if (type === "excess_km") {
+            // Excess km payment — mark as paid if not already processed
+            if (!booking.excessKmPaid) {
+                await prisma.transaction.update({
+                    where: { id: bookingId },
+                    data:  { excessKmPaid: true },
+                })
+                audit({
+                    action:   "payment.excess_km_paid",
+                    entity:   "booking",
+                    entityId: bookingId,
+                    userId:   null,
+                    metadata: {
+                        charge:          booking.excessKmCharge,
+                        stripeSessionId: session.id,
+                    },
+                })
+            }
+        } else if (type === "damage") {
+            if (!booking.damagePaid) {
+                await prisma.transaction.update({
+                    where: { id: bookingId },
+                    data:  { damagePaid: true },
+                })
+                audit({
+                    action:   "payment.damage_paid",
+                    entity:   "booking",
+                    entityId: bookingId,
+                    userId:   null,
+                    metadata: {
+                        charge:          booking.damageCharge,
+                        stripeSessionId: session.id,
+                    },
+                })
+            }
         } else {
             // Original deposit payment — only transition if still PENDING
             if (booking.status === "PENDING") {
@@ -103,6 +153,17 @@ export async function POST(req: NextRequest) {
                     data: {
                         status:          "CONFIRMED",
                         paymentIntentId: session.payment_intent as string ?? null,
+                    },
+                })
+                audit({
+                    action:   "payment.deposit_confirmed",
+                    entity:   "booking",
+                    entityId: bookingId,
+                    userId:   null,
+                    metadata: {
+                        amount:          (session.amount_total ?? 0) / 100,
+                        stripeSessionId: session.id,
+                        car:             `${booking.product.brand} ${booking.product.name}`,
                     },
                 })
             }

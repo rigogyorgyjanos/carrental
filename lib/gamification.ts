@@ -123,7 +123,7 @@ export const BADGE_DEFS = [
         description: "Leave your first review after a completed rental",
         icon: "⭐",
         check: async (userId: string) => {
-            const count = await prisma.review.count({ where: { userId } })
+            const count = await prisma.review.count({ where: { userId, approved: true } })
             return count >= 1
         },
     },
@@ -192,7 +192,10 @@ export async function ensureBadgesSeeded() {
 }
 
 // ── Complete a booking: award XP + check badges ───────────────────────────
-export async function completeBooking(bookingId: string): Promise<{
+export async function completeBooking(
+    bookingId: string,
+    extraData?: Record<string, unknown>,
+): Promise<{
     xpAwarded: number
     newBadges: string[]
     error?: string
@@ -224,7 +227,7 @@ export async function completeBooking(bookingId: string): Promise<{
     await prisma.$transaction(async (tx) => {
         const updated = await tx.transaction.updateMany({
             where: { id: bookingId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
-            data:  { status: "COMPLETED", xpAwarded: xpAmount },
+            data:  { status: "COMPLETED", xpAwarded: xpAmount, ...extraData },
         })
 
         if (updated.count === 0) {

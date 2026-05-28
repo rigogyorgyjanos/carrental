@@ -37,7 +37,8 @@ export default function CarsGrid({ initialCars }: Props) {
         <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {cars.map(car => {
                 const xp = getXpPerDay(car.category)
-                const imageUrl = car.images[0]?.url || "/placeholder.png"
+                const rawUrl   = car.images[0]?.url
+                const imageUrl = rawUrl?.startsWith("http") ? rawUrl : null
 
                 return (
                     <Link
@@ -46,13 +47,15 @@ export default function CarsGrid({ initialCars }: Props) {
                         className="group relative bg-surface rounded-2xl overflow-hidden h-90 border border-surface-3 hover:border-gold/25 transition-all duration-300 card-glow cursor-pointer"
                     >
                         {/* Full-bleed image */}
-                        <Image
-                            src={imageUrl}
-                            alt={car.name}
-                            fill
-                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
+                        {imageUrl && (
+                            <Image
+                                src={imageUrl}
+                                alt={car.name}
+                                fill
+                                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                        )}
 
                         {/* Always-on bottom gradient */}
                         <div className="absolute inset-0 bg-linear-to-t from-dark/95 via-dark/20 to-transparent" />

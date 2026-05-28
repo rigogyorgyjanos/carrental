@@ -8,6 +8,7 @@ import { TIERS, BADGE_DEFS, ensureBadgesSeeded } from "@/lib/gamification"
 import ProfileActions from "./ProfileActions"
 import DeleteAccountButton from "./DeleteAccountButton"
 import ProfileSettings from "@/components/ProfileSettings"
+import XpLogList from "./XpLogList"
 
 export const dynamic = "force-dynamic"
 
@@ -114,9 +115,15 @@ export default async function ProfilePage() {
         createdAt:        t.createdAt.toISOString(),
         dailyKmLimit:     t.product.dailyKmLimit ?? null,
         excessKmFee:      t.product.excessKmFee  ?? null,
-        extraKmPurchased: t.extraKmPurchased,
-        startMileage:     t.startMileage ?? null,
-        endMileage:       t.endMileage   ?? null,
+        extraKmPurchased:  t.extraKmPurchased,
+        startMileage:      t.startMileage      ?? null,
+        endMileage:        t.endMileage        ?? null,
+        excessKmCharge:    t.excessKmCharge    ?? null,
+        excessKmStripeUrl: t.excessKmStripeUrl ?? null,
+        excessKmPaid:      t.excessKmPaid,
+        damageCharge:      t.damageCharge      ?? null,
+        damageStripeUrl:   t.damageStripeUrl   ?? null,
+        damagePaid:        t.damagePaid,
         kmPurchases:      t.kmPurchases.map(p => ({
             kmAmount:  p.kmAmount,
             pricePaid: p.pricePaid,
@@ -190,7 +197,25 @@ export default async function ProfilePage() {
                 </div>
 
                 {/* ── Account settings strip ──────────────────────────── */}
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                        {session.user.role === "ADMIN" && (
+                            <Link
+                                href="/admin"
+                                className="inline-flex items-center gap-2 text-xs font-stats px-4 py-2 rounded-xl border border-gold/30 text-gold bg-gold/8 hover:bg-gold/15 hover:border-gold/50 transition-colors"
+                            >
+                                ⚙ Admin Dashboard
+                            </Link>
+                        )}
+                        {(session.user.role === "MODERATOR" || session.user.role === "ADMIN") && (
+                            <Link
+                                href="/moderator"
+                                className="inline-flex items-center gap-2 text-xs font-stats px-4 py-2 rounded-xl border border-surface-3 text-muted hover:text-white-soft hover:border-gold/20 bg-surface transition-colors"
+                            >
+                                ◈ Fleet Portal
+                            </Link>
+                        )}
+                    </div>
                     <DeleteAccountButton />
                 </div>
 
@@ -328,39 +353,7 @@ export default async function ProfilePage() {
                         <h2 className="font-heading text-2xl font-light text-white-soft mb-5">
                             XP History
                         </h2>
-                        {xpLogs.length === 0 ? (
-                            <div className="bg-surface border border-surface-3 rounded-xl px-6 py-10 text-center">
-                                <p className="text-muted text-4xl mb-3">◎</p>
-                                <p className="text-muted text-sm font-stats">No XP earned yet.</p>
-                                <Link href="/cars" className="text-gold text-xs font-stats hover:underline mt-2 inline-block">
-                                    Browse vehicles →
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="bg-surface border border-surface-3 rounded-xl overflow-hidden">
-                                {xpLogs.map((log, i) => (
-                                    <div
-                                        key={log.id}
-                                        className={`flex items-center justify-between px-5 py-3.5 ${i !== xpLogs.length - 1 ? "border-b border-surface-3" : ""}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-gold text-xs">◆</span>
-                                            <div>
-                                                <p className="text-white-soft text-sm font-stats font-semibold leading-none mb-0.5">
-                                                    {log.label}
-                                                </p>
-                                                <p className="text-muted text-[11px] font-stats">
-                                                    {new Date(log.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span className="text-gold font-stats font-bold text-sm">
-                                            +{log.xpAmount} XP
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <XpLogList logs={xpLogs} />
                     </div>
                 </div>
 

@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
+
+import { audit } from "@/lib/audit"
+
 async function requireAdmin() {
     const session = await getServerSession(authOptions)
     if (!session?.user || session.user.role !== "ADMIN") return null
@@ -57,6 +60,9 @@ export async function PUT(
             }
         }
 
+        const prevUser = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+        const prevRole = prevUser?.role
+
         const updated = await prisma.user.update({
             where: { id },
             data: {
@@ -67,6 +73,26 @@ export async function PUT(
                 level: level != null ? Number(level) : undefined,
             },
             select: { id: true, name: true, email: true, role: true, xp: true, level: true, image: true, createdAt: true },
+        })
+
+        audit({
+            action:    role && role !== prevRole ? "user.role_changed" : "user.edited",
+            entity:    "user",
+            entityId:  id,
+            userId:    session.user.id,
+            userEmail: session.user.email,
+            userRole:  session.user.role,
+            metadata:  {
+                changedFields: [
+                    name  !== undefined ? "name"  : null,
+                    email !== undefined ? "email" : null,
+                    role  !== undefined ? "role"  : null,
+                    xp    != null       ? "xp"    : null,
+                    level != null       ? "level" : null,
+                ].filter(Boolean),
+                prevRole,
+                newRole: role ?? undefined,
+            },
         })
         return NextResponse.json(updated)
     } catch (error) {
@@ -91,7 +117,18 @@ export async function DELETE(
     }
 
     try {
+        const targetUser = await prisma.user.findUnique({ where: { id }, select: { email: true, role: true } })
         await prisma.user.delete({ where: { id } })
+        audit({
+            action:    "user.deleted",
+            entity:    "user",
+            entityId:  id,
+            userId:    session.user.id,
+            userEmail: session.user.email,
+            userRole:  session.user.role,
+            level:     "WARN",
+            metadata:  { deletedUserEmail: targetUser?.email, deletedUserRole: targetUser?.role },
+        })
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("DELETE user error:", error)

@@ -88,14 +88,22 @@ export default function AdminBookingsTable({
 }) {
     const [bookings,      setBookings]      = useState(initialBookings)
     const [filter,        setFilter]        = useState(initialFilter)
+    const [search,        setSearch]        = useState("")
     const [loading,       setLoading]       = useState<string | null>(null)
     const [errorMsg,      setErrorMsg]      = useState("")
     const [mileageInput,  setMileageInput]  = useState<Record<string, string>>({})  // bookingId → km value
     const [mileagePrompt, setMileagePrompt] = useState<Record<string, "activate" | "complete" | null>>({})
 
-    const filtered = filter === "ALL"
-        ? bookings
-        : bookings.filter(b => b.status === filter)
+    const q = search.trim().toLowerCase()
+    const filtered = (filter === "ALL" ? bookings : bookings.filter(b => b.status === filter))
+        .filter(b => {
+            if (!q) return true
+            return (
+                b.userName.toLowerCase().includes(q) ||
+                b.userEmail.toLowerCase().includes(q) ||
+                b.productName.toLowerCase().includes(q)
+            )
+        })
 
     const pendingCount   = bookings.filter(b => b.status === "PENDING").length
     const confirmedCount = bookings.filter(b => b.status === "CONFIRMED").length
@@ -125,22 +133,15 @@ export default function AdminBookingsTable({
         setLoading(bookingId + newStatus)
         setErrorMsg("")
 
-        // If km limit is on this car, record mileage via PUT before status PATCH
-        const booking = bookings.find(b => b.id === bookingId)
-        if (km != null && booking) {
-            const mileageField = newStatus === "ACTIVE" ? "startMileage" : "endMileage"
-            await fetch(`/api/admin/transactions/${bookingId}`, {
-                method:  "PUT",
-                headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({ [mileageField]: km }),
-            }).catch(() => {})
-        }
+        // Mileage is sent in the same PATCH body so server writes it atomically with the status change
+        const mileageField = newStatus === "ACTIVE" ? "startMileage" : newStatus === "COMPLETED" ? "endMileage" : null
+        const mileagePayload = km != null && mileageField ? { [mileageField]: km } : {}
 
         try {
             const res = await fetch(`/api/admin/transactions/${bookingId}`, {
                 method:  "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({ status: newStatus }),
+                body:    JSON.stringify({ status: newStatus, ...mileagePayload }),
             })
             if (res.ok) {
                 const result = await res.json().catch(() => ({}))
@@ -189,6 +190,15 @@ export default function AdminBookingsTable({
                     </span>
                 )}
             </div>
+
+            {/* Search */}
+            <input
+                type="text"
+                placeholder="Search by customer name, email or car…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-dark border border-surface-3 rounded-xl px-4 py-2.5 text-sm font-stats text-white-soft placeholder:text-muted focus:outline-none focus:border-gold/40 transition-colors"
+            />
 
             {/* Filter tabs */}
             <div className="flex flex-wrap gap-1">

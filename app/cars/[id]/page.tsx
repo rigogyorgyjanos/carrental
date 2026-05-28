@@ -81,7 +81,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
     const [car, reviews] = await Promise.all([
         prisma.product.findUnique({
             where: { id },
-            include: { images: true },
+            include: { images: true, company: { select: { name: true, slug: true } } },
         }),
         prisma.review.findMany({
             where:   { productId: id, approved: true },
@@ -117,7 +117,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
         user:      { id: r.user.id, name: r.user.name, image: r.user.image },
     }))
 
-    if (!car || !car.active) {
+    if (!car || !car.active || car.approvalStatus !== "APPROVED") {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4">
                 <p className="text-muted text-5xl">◎</p>
@@ -178,6 +178,14 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                         <div className="mb-10">
                             <p className="text-gold text-[11px] font-stats uppercase tracking-[0.25em] mb-3">
                                 {car.brand} · {car.category}
+                                {car.company && (
+                                    <>
+                                        {" · "}
+                                        <a href={`/companies/${car.company.slug}`} className="hover:text-gold-light underline underline-offset-2 transition-colors">
+                                            {car.company.name}
+                                        </a>
+                                    </>
+                                )}
                             </p>
                             <h1 className="font-heading text-5xl md:text-6xl font-light text-white-soft leading-tight mb-4">
                                 {car.name}
@@ -188,7 +196,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                                     <span className="flex items-center gap-1">
                                         <span className="text-gold">★</span>
                                         <span className="text-white-soft font-semibold">{car.rating}</span>
-                                        <span className="text-muted">({car.reviewCount} reviews)</span>
+                                        <span className="text-muted">({car.reviewCount ?? 0} reviews)</span>
                                     </span>
                                 )}
                                 <span className="text-surface-3">·</span>
@@ -298,6 +306,52 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                                 </div>
                             </>
                         )}
+
+                        {/* ── Km packages preview ── */}
+                        {car.dailyKmLimit != null && car.excessKmFee != null && (() => {
+                            const KM_PACKAGES   = [50, 100, 200] as const
+                            const pricePerKm    = car.excessKmFee * 0.70
+                            return (
+                                <>
+                                    <div className="border-t border-surface-3 my-10" />
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <h2 className="font-heading text-2xl font-semibold text-white-soft">
+                                                Extra Km Packages
+                                            </h2>
+                                            <span className="text-[10px] font-stats text-emerald-400 uppercase tracking-wider">
+                                                30% cheaper than excess rate
+                                            </span>
+                                        </div>
+                                        <p className="text-muted text-sm font-stats mb-5">
+                                            Pre-purchase km before your rental — cheaper than paying the excess rate at return.
+                                            Package rate: <span className="text-emerald-400 font-semibold">€{pricePerKm.toFixed(2)}/km</span>{" "}
+                                            vs excess rate: <span className="text-white-soft">€{car.excessKmFee}/km</span>.
+                                        </p>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {KM_PACKAGES.map(km => {
+                                                const price = Math.round(km * pricePerKm * 100) / 100
+                                                const saving = Math.round(km * (car.excessKmFee! - pricePerKm) * 100) / 100
+                                                return (
+                                                    <div
+                                                        key={km}
+                                                        className="bg-surface border border-emerald-500/20 rounded-2xl px-4 py-4 text-center"
+                                                    >
+                                                        <p className="text-emerald-400 font-heading text-2xl font-light leading-none">+{km}</p>
+                                                        <p className="text-muted text-[11px] font-stats mt-0.5 mb-3">km</p>
+                                                        <p className="text-white-soft font-stats font-semibold text-base">€{price.toFixed(2)}</p>
+                                                        <p className="text-emerald-400/70 text-[10px] font-stats mt-0.5">save €{saving.toFixed(2)}</p>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                        <p className="text-muted/50 text-[11px] font-stats mt-3">
+                                            Packages can be purchased after booking from your profile page while the rental is active.
+                                        </p>
+                                    </div>
+                                </>
+                            )
+                        })()}
 
                         {/* ── Reviews ── */}
                         <div className="border-t border-surface-3 my-10" />

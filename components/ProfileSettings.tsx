@@ -83,7 +83,7 @@ export default function ProfileSettings({ initialShowOnLeaderboard, initialRecei
                 label="Show on Leaderboard"
                 description={<>
                     Your rank, XP and badges are visible to everyone on the{" "}
-                    <Link href="/leaderboard" className="text-gold hover:underline">public leaderboard</Link>
+                    <Link href="/programme" className="text-gold hover:underline">AURUM Programme</Link>
                 </>}
                 checked={showOnLeaderboard}
                 saving={saving}

@@ -5,31 +5,34 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { getXpForRental, getTier } from "@/lib/tiers"
+import PayDepositButton from "./PayDepositButton"
 
 export const dynamic = "force-dynamic"
 
 const SERVICE_FEE = 10
 
 const STATUS_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    PENDING:   { label: "Pending confirmation", color: "#F59E0B", bg: "#F59E0B15", border: "#F59E0B30" },
-    CONFIRMED: { label: "Confirmed",            color: "#60A5FA", bg: "#60A5FA15", border: "#60A5FA30" },
-    ACTIVE:    { label: "Active rental",        color: "#34D399", bg: "#34D39915", border: "#34D39930" },
-    COMPLETED: { label: "Completed",            color: "#C9A84C", bg: "#C9A84C15", border: "#C9A84C30" },
-    CANCELLED: { label: "Cancelled",            color: "#6B7280", bg: "#6B728015", border: "#6B728030" },
+    PENDING:   { label: "Awaiting payment",      color: "#F59E0B", bg: "#F59E0B15", border: "#F59E0B30" },
+    CONFIRMED: { label: "Confirmed",             color: "#60A5FA", bg: "#60A5FA15", border: "#60A5FA30" },
+    ACTIVE:    { label: "Active rental",         color: "#34D399", bg: "#34D39915", border: "#34D39930" },
+    COMPLETED: { label: "Completed",             color: "#C9A84C", bg: "#C9A84C15", border: "#C9A84C30" },
+    CANCELLED: { label: "Cancelled",             color: "#6B7280", bg: "#6B728015", border: "#6B728030" },
 }
 
 interface Props {
     params:       Promise<{ id: string }>
-    searchParams: Promise<{ payment?: string }>
+    searchParams: Promise<{ payment?: string; damage_paid?: string; excess_paid?: string }>
 }
 
 export default async function BookingConfirmPage({ params, searchParams }: Props) {
     const session = await getServerSession(authOptions)
     if (!session?.user) redirect("/api/auth/signin")
 
-    const { id }      = await params
-    const { payment } = await searchParams
-    const paymentSuccess = payment === "success"
+    const { id }                             = await params
+    const { payment, damage_paid, excess_paid } = await searchParams
+    const paymentSuccess = payment    === "success"
+    const damagePaid     = damage_paid  === "1"
+    const excessPaid     = excess_paid  === "1"
 
     const booking = await prisma.transaction.findUnique({
         where: { id },
@@ -58,6 +61,7 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
     const tier          = getTier(booking.user.xp)
     const statusStyle   = STATUS_STYLES[booking.status] ?? STATUS_STYLES.PENDING
     const coverImage    = booking.product.images[0]?.url ?? null
+    const isPending     = booking.status === "PENDING"
 
     const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
 
@@ -65,30 +69,34 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
         <div className="min-h-screen bg-dark">
             <div className="max-w-2xl mx-auto px-6 py-16">
 
-                {/* ── Success hero ──────────────────────────────────── */}
+                {/* ── Hero ─────────────────────────────────────────── */}
                 <div className="text-center mb-12">
                     <div
                         className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 text-4xl"
                         style={{ background: `${statusStyle.color}18`, border: `2px solid ${statusStyle.color}40` }}
                     >
-                        {booking.status === "COMPLETED" ? "✓" :
-                         booking.status === "CANCELLED" ? "✕" : "🎉"}
+                        {booking.status === "COMPLETED" ? "✓"  :
+                         booking.status === "CANCELLED" ? "✕"  :
+                         booking.status === "PENDING"   ? "⏳" : "🎉"}
                     </div>
                     <h1 className="font-heading text-4xl font-light text-white-soft mb-2">
-                        {booking.status === "COMPLETED" ? "Rental Completed" :
-                         booking.status === "CANCELLED" ? "Booking Cancelled" :
+                        {booking.status === "COMPLETED" ? "Rental Completed"      :
+                         booking.status === "CANCELLED" ? "Booking Cancelled"     :
+                         booking.status === "PENDING"   ? "Complete Your Payment" :
                          "Booking Confirmed!"}
                     </h1>
                     <p className="text-muted text-sm font-stats">
                         {booking.status === "PENDING"
-                            ? "Your reservation is pending confirmation from our team. We'll be in touch shortly."
+                            ? "Your dates are reserved — pay the deposit to confirm your booking."
                             : booking.status === "CONFIRMED"
                             ? "Your reservation is confirmed. Enjoy your drive!"
                             : ""}
                     </p>
                 </div>
 
-                {/* ── Payment success banner ───────────────────────── */}
+                {/* ── Banners ──────────────────────────────────────── */}
+
+                {/* Deposit success */}
                 {paymentSuccess && (
                     <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl px-5 py-4 mb-6">
                         <span className="text-emerald-400 text-xl shrink-0">✓</span>
@@ -98,6 +106,51 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
                             </p>
                             <p className="text-muted text-[12px] font-stats">
                                 Your booking is now confirmed. A confirmation email has been sent.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Excess km paid */}
+                {excessPaid && (
+                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl px-5 py-4 mb-6">
+                        <span className="text-emerald-400 text-xl shrink-0">✓</span>
+                        <div>
+                            <p className="text-emerald-400 font-stats font-semibold text-sm leading-none mb-0.5">
+                                Excess km charge paid
+                            </p>
+                            <p className="text-muted text-[12px] font-stats">
+                                Thank you — the excess km charge has been settled.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Damage paid */}
+                {damagePaid && (
+                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl px-5 py-4 mb-6">
+                        <span className="text-emerald-400 text-xl shrink-0">✓</span>
+                        <div>
+                            <p className="text-emerald-400 font-stats font-semibold text-sm leading-none mb-0.5">
+                                Damage charge paid
+                            </p>
+                            <p className="text-muted text-[12px] font-stats">
+                                Thank you — the damage charge has been settled.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Pending payment warning */}
+                {isPending && !paymentSuccess && (
+                    <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-4 mb-6">
+                        <span className="text-amber-400 text-xl shrink-0 mt-0.5">⚠</span>
+                        <div>
+                            <p className="text-amber-400 font-stats font-semibold text-sm leading-none mb-1">
+                                Payment required
+                            </p>
+                            <p className="text-muted text-[12px] font-stats">
+                                Your booking is not yet confirmed. Complete the deposit payment below to secure your dates.
                             </p>
                         </div>
                     </div>
@@ -172,17 +225,21 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
                         <span className="text-white-soft">€{SERVICE_FEE}</span>
                     </div>
 
-                    {booking.deposit != null && (
-                        <div className="flex justify-between text-sm font-stats">
-                            <span className="text-muted">Deposit (refundable)</span>
-                            <span className="text-white-soft">€{booking.deposit.toFixed(0)}</span>
-                        </div>
-                    )}
-
                     <div className="flex justify-between font-bold border-t border-surface-3 pt-3 mt-1">
                         <span className="text-white-soft font-stats">Total</span>
                         <span className="text-gold font-stats text-xl">€{booking.totalPrice.toFixed(0)}</span>
                     </div>
+
+                    {booking.deposit != null && (
+                        <div className="flex justify-between text-sm font-stats border-t border-surface-3 pt-3">
+                            <span className="text-muted">
+                                Deposit {isPending ? "due now" : "paid"}
+                            </span>
+                            <span className={isPending ? "text-amber-400 font-semibold" : "text-white-soft"}>
+                                €{booking.deposit.toFixed(0)}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* ── XP banner ─────────────────────────────────────── */}
@@ -205,19 +262,33 @@ export default async function BookingConfirmPage({ params, searchParams }: Props
                 )}
 
                 {/* ── Actions ───────────────────────────────────────── */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Link
-                        href="/profile"
-                        className="flex-1 text-center bg-gold hover:bg-gold-light text-dark font-body font-semibold py-4 rounded-xl text-sm transition-colors"
-                    >
-                        View all bookings
-                    </Link>
-                    <Link
-                        href="/cars"
-                        className="flex-1 text-center bg-surface border border-surface-3 hover:border-gold/30 text-white-soft font-body font-semibold py-4 rounded-xl text-sm transition-colors"
-                    >
-                        Browse more cars
-                    </Link>
+                <div className="flex flex-col gap-3">
+                    {/* Pay deposit — only for PENDING bookings */}
+                    {isPending && (
+                        <PayDepositButton
+                            bookingId={booking.id}
+                            depositAmt={booking.deposit}
+                        />
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Link
+                            href="/profile"
+                            className={`flex-1 text-center font-body font-semibold py-4 rounded-xl text-sm transition-colors ${
+                                isPending
+                                    ? "bg-surface border border-surface-3 hover:border-gold/30 text-white-soft"
+                                    : "bg-gold hover:bg-gold-light text-dark"
+                            }`}
+                        >
+                            View all bookings
+                        </Link>
+                        <Link
+                            href="/cars"
+                            className="flex-1 text-center bg-surface border border-surface-3 hover:border-gold/30 text-white-soft font-body font-semibold py-4 rounded-xl text-sm transition-colors"
+                        >
+                            Browse more cars
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Booking reference */}

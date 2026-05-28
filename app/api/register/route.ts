@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcrypt"
+import { audit } from "@/lib/audit"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -41,6 +42,15 @@ export async function POST(req: Request) {
                 },
             },
             select: { id: true, email: true, name: true },
+        })
+
+        audit({
+            action:    "user.registered",
+            entity:    "user",
+            entityId:  user.id,
+            userEmail: user.email,
+            userRole:  "USER",
+            metadata:  { name: user.name, method: "credentials" },
         })
 
         return NextResponse.json(user, { status: 201 })

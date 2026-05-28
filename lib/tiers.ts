@@ -36,15 +36,3 @@ export function getXpPerDay(category: string): number {
 export function getXpForRental(category: string, totalDays: number): number {
     return getXpPerDay(category) * totalDays
 }
-
-export function getTierProgress(xp: number) {
-    const idx     = [...TIERS].reverse().findIndex(t => xp >= t.minXp)
-    const tierIdx = TIERS.length - 1 - idx
-    const current = TIERS[tierIdx]
-    const next    = TIERS[tierIdx + 1] ?? null
-    const xpIn    = xp - current.minXp
-    const range   = next ? next.minXp - current.minXp : 1
-    const progress = next ? Math.min(100, Math.round((xpIn / range) * 100)) : 100
-    const xpToNext = next ? next.minXp - xp : 0
-    return { current, next, progress, xpToNext }
-}

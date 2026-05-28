@@ -116,7 +116,8 @@ export function buildWhere(params: RawParams): Prisma.ProductWhereInput {
     }
 
     return {
-        active: true,
+        active:         true,
+        approvalStatus: "APPROVED",
         ...(AND.length > 0 && { AND })
     }
 }

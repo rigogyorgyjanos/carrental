@@ -6,11 +6,14 @@ import { signOut } from "next-auth/react"
 
 const NAV = [
     { href: "/admin",              label: "Dashboard"  },
+    { href: "/admin/companies",    label: "Companies"  },
+    { href: "/admin/pending",      label: "Pending"    },
     { href: "/admin/transactions", label: "Bookings"   },
     { href: "/admin/cars",         label: "Cars"       },
     { href: "/admin/users",        label: "Users"      },
     { href: "/admin/reviews",      label: "Reviews"    },
     { href: "/admin/newsletter",   label: "Newsletter" },
+    { href: "/admin/logs",        label: "Logs"       },
 ]
 
 export default function AdminNavbar() {

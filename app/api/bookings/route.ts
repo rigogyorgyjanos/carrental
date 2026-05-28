@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { getTierDiscount, getTier, getXpForRental } from "@/lib/tiers"
+import { audit } from "@/lib/audit"
 
 const SERVICE_FEE = 10
 import { sendMail } from "@/lib/nodemailer"
@@ -186,6 +187,22 @@ export async function POST(req: NextRequest) {
                 `,
             }).catch(err => console.error("Admin email failed:", err))
         }
+
+        audit({
+            action:    "booking.created",
+            entity:    "booking",
+            entityId:  booking.id,
+            userId:    session.user.id,
+            userEmail: session.user.email,
+            userRole:  session.user.role,
+            metadata:  {
+                car:        `${product.brand} ${product.name}`,
+                dates:      `${startDate} → ${endDate}`,
+                totalDays,
+                totalPrice,
+                discount:   discount > 0 ? `${(discount * 100).toFixed(0)}%` : null,
+            },
+        })
 
         return NextResponse.json({ ...booking, discountApplied: discount }, { status: 201 })
     } catch (error) {

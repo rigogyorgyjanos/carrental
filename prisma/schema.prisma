@@ -51,13 +51,18 @@ model User {
   showOnLeaderboard        Boolean @default(true)
   receivePromotionalEmails Boolean @default(true)
 
+  // Company membership (for MODERATOR role)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   accounts  Account[]
   sessions  Session[]
 
-  transactions Transaction[]
-  xpLogs      XpTransaction[]
-  badges      UserBadge[]
-  reviews     Review[]
+  transactions    Transaction[]
+  xpLogs          XpTransaction[]
+  badges          UserBadge[]
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
 
   PasswordResets PasswordReset[]
 
@@ -65,6 +70,7 @@ model User {
 
   @@index([role])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 model PasswordReset {
@@ -86,29 +92,38 @@ model Product {
   category      String     @default("Sedan")
   description   String
   pricePerDay   Float
-  deposit       Float?     // opcionális
+  deposit       Float?
   transmission  String     @default("Automatic")
   fuelType      String     @default("Petrol")
   seats         Int        @default(4)
-  horsepower    Int?       // opcionális
-  drivetrain    String?    // opcionális
-  zeroToHundred Float?     // opcionális
-  topSpeed      Int?       // opcionális
+  horsepower    Int?
+  drivetrain    String?
+  zeroToHundred Float?
+  topSpeed      Int?
   mileage       Int        @default(0)
   licensePlate  String     @default("UNKNOWN")
   location      String     @default("Budapest")
-  minimumAge    Int?       // opcionális
-  minimumRentalDays Int?   // opcionális
-  dailyKmLimit  Int?       // included km per day, null = unlimited
-  excessKmFee   Float?     // €/km over limit, null = no excess charge
+  minimumAge    Int?
+  minimumRentalDays Int?
+  dailyKmLimit  Int?
+  excessKmFee   Float?
   featured      Boolean    @default(false)
-  active        Boolean    @default(true)
-  rating        Float?     // opcionális
-  reviewCount   Int?       // opcionális
+  active        Boolean    @default(false)
+  rating        Float?
+  reviewCount   Int?
 
-  images        CarImage[]
-  transactions  Transaction[]
-  reviews       Review[]
+  // Company ownership
+  companyId      String?
+  company        Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  // Approval workflow
+  approvalStatus ApprovalStatus @default(PENDING)
+  adminNote      String?        @db.Text
+
+  images          CarImage[]
+  transactions    Transaction[]
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
 
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -118,6 +133,8 @@ model Product {
   @@index([location])
   @@index([featured, active])
   @@index([active, pricePerDay])
+  @@index([companyId])
+  @@index([approvalStatus])
 }
 
 model CarImage {
@@ -164,11 +181,22 @@ model Transaction {
   // Mileage tracking
   startMileage      Int?   // odometer at pickup
   endMileage        Int?   // odometer at return
-  extraKmPurchased  Int    @default(0) // total extra km bought (sum of all packages)
-  excessKmCharge    Float? // computed: (usedKm − allowedKm − extraKmPurchased) × excessKmFee
+  extraKmPurchased        Int     @default(0)
+  excessKmCharge          Float?
+  excessKmStripeSessionId String? @unique
+  excessKmStripeUrl       String?
+  excessKmPaid            Boolean @default(false)
+
+  // Vehicle inspection at return
+  inspectionReport        Json?
+  damageCharge            Float?
+  damageStripeSessionId   String? @unique
+  damageStripeUrl         String?
+  damagePaid              Boolean @default(false)
 
   // Km package purchase history
   kmPurchases       KmPurchase[]
+  reviewRequests    ReviewRequest[]
 
   // Admin notes
   notes String?
@@ -254,6 +282,23 @@ model Review {
   @@index([approved])
 }
 
+model ReviewRequest {
+  id            String    @id @default(cuid())
+  token         String    @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transactionId String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
 model NewsletterLog {
   id            String   @id @default(cuid())
   subject       String
@@ -266,7 +311,64 @@ model NewsletterLog {
 }
 
 enum Role {
- ADMIN
- USER
- MODERATOR
+  ADMIN
+  USER
+  MODERATOR
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  level     LogLevel @default(INFO)
+  action    String   // e.g. "booking.created", "car.approved", "user.role_changed"
+  entity    String?  // "booking" | "car" | "user" | "review" | "payment"
+  entityId  String?  // ID of the affected record
+
+  userId    String?  // actor (null = system/webhook)
+  userEmail String?  // snapshot at time of action
+  userRole  String?  // snapshot
+
+  metadata  Json?    // extra structured details (amounts, old→new status, etc.)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([userId])
+}
+
+model Company {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?       @db.Text
+  logoUrl     String?
+  website     String?
+  address     String?
+  status      CompanyStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  users    User[]
+  products Product[]
+
+  @@index([slug])
+  @@index([status])
 }

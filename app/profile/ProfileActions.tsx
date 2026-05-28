@@ -28,10 +28,16 @@ interface BookingRow {
     createdAt:        string
     dailyKmLimit:     number | null
     excessKmFee:      number | null
-    extraKmPurchased: number
-    startMileage:     number | null
-    endMileage:       number | null
-    kmPurchases:      KmPurchaseRow[]
+    extraKmPurchased:  number
+    startMileage:      number | null
+    endMileage:        number | null
+    excessKmCharge:    number | null
+    excessKmStripeUrl: string | null
+    excessKmPaid:      boolean
+    damageCharge:      number | null
+    damageStripeUrl:   string | null
+    damagePaid:        boolean
+    kmPurchases:       KmPurchaseRow[]
 }
 
 interface StatusStyle {
@@ -44,9 +50,10 @@ interface Props {
     statusStyles: Record<string, StatusStyle>
 }
 
-const CANCELLABLE = new Set(["PENDING", "CONFIRMED"])
-const KM_PACKAGES = [50, 100, 200] as const
-const DISCOUNT    = 0.70
+const CANCELLABLE  = new Set(["PENDING", "CONFIRMED"])
+const KM_PACKAGES  = [50, 100, 200] as const
+const DISCOUNT     = 0.70
+const BOOKING_LIMIT = 3
 
 function KmDetailsSection({ tx }: { tx: BookingRow }) {
     if (!tx.dailyKmLimit) return null
@@ -233,7 +240,7 @@ function KmPackageWidget({ tx }: { tx: BookingRow }) {
                                 className="flex flex-col items-center px-4 py-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/8 hover:border-emerald-500/50 hover:bg-emerald-500/15 transition-all"
                             >
                                 <span className="text-emerald-400 font-stats font-bold text-sm leading-none">+{km} km</span>
-                                <span className="text-muted text-[10px] font-stats mt-0.5">€{price.toFixed(0)}</span>
+                                <span className="text-muted text-[10px] font-stats mt-0.5">€{price.toFixed(2)}</span>
                             </button>
                         )
                     })}
@@ -342,6 +349,7 @@ function KmPackageWidget({ tx }: { tx: BookingRow }) {
 export default function ProfileActions({ transactions, statusStyles }: Props) {
     const [txs,        setTxs]        = useState(transactions)
     const [cancelling, setCancelling] = useState<string | null>(null)
+    const [showAll,    setShowAll]    = useState(false)
     const router = useRouter()
 
     const cancelBooking = async (id: string) => {
@@ -379,9 +387,12 @@ export default function ProfileActions({ transactions, statusStyles }: Props) {
         )
     }
 
+    const visible = showAll ? txs : txs.slice(0, BOOKING_LIMIT)
+    const hidden  = txs.length - BOOKING_LIMIT
+
     return (
         <div className="space-y-3">
-            {txs.map(tx => {
+            {visible.map(tx => {
                 const start         = new Date(tx.startDate)
                 const end           = new Date(tx.endDate)
                 const style         = statusStyles[tx.status] ?? { label: tx.status, classes: "bg-surface-3 text-muted border-surface-3" }
@@ -428,6 +439,68 @@ export default function ProfileActions({ transactions, statusStyles }: Props) {
 
                                 {/* Extra km widget — only for ACTIVE bookings with km limit */}
                                 {isActive && tx.dailyKmLimit && <KmPackageWidget tx={tx} />}
+
+                                {/* ── Excess km charge panel ── */}
+                                {tx.status === "COMPLETED" && tx.excessKmCharge != null && tx.excessKmCharge > 0 && (
+                                    <div className="mt-3 border-t border-surface-3 pt-3">
+                                        {tx.excessKmPaid ? (
+                                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
+                                                <span className="text-emerald-400 text-sm">✓</span>
+                                                <p className="text-emerald-400 text-sm font-stats font-semibold">Excess km charge paid</p>
+                                                <span className="ml-auto text-emerald-400 font-stats font-bold">€{tx.excessKmCharge.toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-danger/5 border border-danger/20 rounded-xl px-4 py-3 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-danger text-sm">⚠</span>
+                                                    <p className="text-danger text-sm font-stats font-semibold">Excess km charge due</p>
+                                                    <span className="ml-auto text-danger font-stats font-bold">€{tx.excessKmCharge.toFixed(2)}</span>
+                                                </div>
+                                                {tx.excessKmStripeUrl && (
+                                                    <a
+                                                        href={tx.excessKmStripeUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-stats px-3 py-1.5 rounded-xl border border-danger/30 text-danger hover:bg-danger/10 transition-colors"
+                                                    >
+                                                        Pay now ↗
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ── Damage charge panel ── */}
+                                {tx.status === "COMPLETED" && tx.damageCharge != null && tx.damageCharge > 0 && (
+                                    <div className="mt-3 border-t border-surface-3 pt-3">
+                                        {tx.damagePaid ? (
+                                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
+                                                <span className="text-emerald-400 text-sm">✓</span>
+                                                <p className="text-emerald-400 text-sm font-stats font-semibold">Damage charge paid</p>
+                                                <span className="ml-auto text-emerald-400 font-stats font-bold">€{tx.damageCharge.toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-danger/5 border border-danger/20 rounded-xl px-4 py-3 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-danger text-sm">⚠</span>
+                                                    <p className="text-danger text-sm font-stats font-semibold">Damage charge due</p>
+                                                    <span className="ml-auto text-danger font-stats font-bold">€{tx.damageCharge.toFixed(2)}</span>
+                                                </div>
+                                                {tx.damageStripeUrl && (
+                                                    <a
+                                                        href={tx.damageStripeUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-stats px-3 py-1.5 rounded-xl border border-danger/30 text-danger hover:bg-danger/10 transition-colors"
+                                                    >
+                                                        Pay now ↗
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Right: pricing + actions */}
@@ -492,6 +565,23 @@ export default function ProfileActions({ transactions, statusStyles }: Props) {
                     </div>
                 )
             })}
+
+            {!showAll && hidden > 0 && (
+                <button
+                    onClick={() => setShowAll(true)}
+                    className="w-full text-xs font-stats text-muted hover:text-gold border border-surface-3 hover:border-gold/20 py-2.5 rounded-xl transition-colors"
+                >
+                    Show {hidden} more booking{hidden === 1 ? "" : "s"}
+                </button>
+            )}
+            {showAll && txs.length > BOOKING_LIMIT && (
+                <button
+                    onClick={() => setShowAll(false)}
+                    className="w-full text-xs font-stats text-muted hover:text-gold border border-surface-3 hover:border-gold/20 py-2.5 rounded-xl transition-colors"
+                >
+                    Show less
+                </button>
+            )}
         </div>
     )
 }

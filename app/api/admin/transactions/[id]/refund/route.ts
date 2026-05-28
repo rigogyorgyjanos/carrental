@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { stripe } from "@/lib/stripe"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { audit } from "@/lib/audit"
 
 export async function POST(
     _req: NextRequest,
@@ -28,15 +29,31 @@ export async function POST(
     if (booking.paymentIntentId) {
         try {
             await stripe.refunds.create({ payment_intent: booking.paymentIntentId })
-        } catch (err) {
-            console.error("Stripe refund failed:", err)
-            return NextResponse.json({ error: "Stripe refund failed" }, { status: 502 })
+        } catch (err: any) {
+            // Silently skip if already fully refunded
+            if (err?.code === "charge_already_refunded") {
+                // no-op — treat as success
+            } else {
+                console.error("Stripe refund failed:", err)
+                return NextResponse.json({ error: "Stripe refund failed" }, { status: 502 })
+            }
         }
     }
 
     const updated = await prisma.transaction.update({
         where: { id },
         data:  { status: "CANCELLED" },
+    })
+
+    audit({
+        action:    "booking.refunded",
+        entity:    "booking",
+        entityId:  id,
+        userId:    session.user.id,
+        userEmail: session.user.email,
+        userRole:  session.user.role,
+        level:     "WARN",
+        metadata:  { paymentIntentId: booking.paymentIntentId },
     })
 
     return NextResponse.json({ success: true, booking: updated })

@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { getTierDiscount } from "@/lib/tiers"
 import { stripe } from "@/lib/stripe"
+import { audit } from "@/lib/audit"
 
 const DATE_RE    = /^\d{4}-\d{2}-\d{2}$/
 const SERVICE_FEE = 10
@@ -70,14 +70,27 @@ export async function DELETE(
         if (existing.status === "CONFIRMED" && existing.paymentIntentId) {
             try {
                 await stripe.refunds.create({ payment_intent: existing.paymentIntentId })
-            } catch (refundErr) {
-                console.error("Stripe refund failed (cancellation proceeds):", refundErr)
+            } catch (refundErr: any) {
+                // If already refunded (e.g. admin already issued one), skip silently
+                if (refundErr?.code !== "charge_already_refunded") {
+                    console.error("Stripe refund failed (cancellation proceeds):", refundErr)
+                }
             }
         }
 
         await prisma.transaction.update({
             where: { id: bookingId },
             data:  { status: "CANCELLED" },
+        })
+
+        audit({
+            action:    "booking.cancelled_by_user",
+            entity:    "booking",
+            entityId:  bookingId,
+            userId:    session.user.id,
+            userEmail: session.user.email,
+            userRole:  session.user.role,
+            metadata:  { previousStatus: existing.status },
         })
 
         return NextResponse.json({ success: true })
@@ -130,36 +143,58 @@ export async function PUT(
                 { status: 400 }
             )
 
-        const overlapping = await prisma.transaction.findFirst({
-            where: {
-                productId: existing.productId,
-                id: { not: bookingId },
-                status: { in: ["PENDING", "CONFIRMED", "ACTIVE"] },
-                OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
-            },
-            select: { id: true },
-        })
-        if (overlapping)
-            return NextResponse.json({ error: "Car already booked for this period" }, { status: 409 })
-
-        const dbUser = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { xp: true },
-        })
-        const discount   = getTierDiscount(dbUser?.xp ?? 0)
+        // Preserve the discount that was locked in at booking creation time
+        const discount   = existing.discountApplied ?? 0
         const basePrice  = totalDays * existing.product.pricePerDay
         const totalPrice = Math.round((basePrice * (1 - discount) + SERVICE_FEE) * 100) / 100
         const deposit    = existing.product.deposit ?? Math.round(totalPrice * 0.2 * 100) / 100
 
-        const updated = await prisma.transaction.update({
-            where: { id: bookingId },
-            data: {
-                startDate:       start,
-                endDate:         end,
+        // Serializable transaction: overlap check + update are atomic to prevent race conditions
+        let updated
+        try {
+            updated = await prisma.$transaction(async (tx) => {
+                const overlapping = await tx.transaction.findFirst({
+                    where: {
+                        productId: existing.productId,
+                        id:     { not: bookingId },
+                        status: { in: ["PENDING", "CONFIRMED", "ACTIVE"] },
+                        OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
+                    },
+                    select: { id: true },
+                })
+                if (overlapping) throw Object.assign(new Error("OVERLAP"), { code: "OVERLAP" })
+
+                return tx.transaction.update({
+                    where: { id: bookingId },
+                    data: {
+                        startDate:       start,
+                        endDate:         end,
+                        totalDays,
+                        totalPrice,
+                        deposit,
+                        discountApplied: discount > 0 ? discount : null,
+                    },
+                })
+            }, { isolationLevel: "Serializable" })
+        } catch (err: any) {
+            if (err?.code === "OVERLAP") {
+                return NextResponse.json({ error: "Car already booked for this period" }, { status: 409 })
+            }
+            throw err
+        }
+
+        audit({
+            action:    "booking.dates_edited",
+            entity:    "booking",
+            entityId:  bookingId,
+            userId:    session.user.id,
+            userEmail: session.user.email,
+            userRole:  session.user.role,
+            metadata:  {
+                newStart:    startDate,
+                newEnd:      endDate,
                 totalDays,
                 totalPrice,
-                deposit,
-                discountApplied: discount > 0 ? discount : null,
             },
         })
 

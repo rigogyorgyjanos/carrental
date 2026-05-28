@@ -18,22 +18,64 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     await ensureBadgesSeeded()
 
     const now = new Date()
-    const overdue = await prisma.transaction.findMany({
-        where: {
-            status: { in: ["CONFIRMED", "ACTIVE"] },
-            endDate: { lt: now },
-        },
+
+    // ACTIVE bookings past end date → complete (awards XP)
+    const overdueActive = await prisma.transaction.findMany({
+        where: { status: "ACTIVE", endDate: { lt: now } },
         select: { id: true },
     })
 
-    const results = await Promise.allSettled(
-        overdue.map(b => completeBooking(b.id))
+    const completionResults = await Promise.allSettled(
+        overdueActive.map(b => completeBooking(b.id))
     )
+    const completed = completionResults.filter(r => r.status === "fulfilled" && !(r.value as any).error).length
+    const completeFailed = completionResults.length - completed
 
-    const completed = results.filter(r => r.status === "fulfilled").length
-    const failed    = results.length - completed
+    // CONFIRMED bookings past end date → cancel (car was never picked up)
+    const overdueConfirmed = await prisma.transaction.findMany({
+        where: { status: "CONFIRMED", endDate: { lt: now } },
+        select: { id: true },
+    })
 
-    return NextResponse.json({ processed: overdue.length, completed, failed })
+    let confirmedCancelled = 0
+    for (const b of overdueConfirmed) {
+        try {
+            await prisma.transaction.update({
+                where: { id: b.id },
+                data:  { status: "CANCELLED", notes: "Auto-cancelled: never activated past rental end date" },
+            })
+            confirmedCancelled++
+        } catch (err) {
+            console.error(`[cron] Failed to auto-cancel confirmed booking ${b.id}:`, err)
+        }
+    }
+
+    // PENDING bookings past end date → cancel (payment never completed)
+    const overduePending = await prisma.transaction.findMany({
+        where: { status: "PENDING", endDate: { lt: now } },
+        select: { id: true },
+    })
+
+    let pendingCancelled = 0
+    for (const b of overduePending) {
+        try {
+            await prisma.transaction.update({
+                where: { id: b.id },
+                data:  { status: "CANCELLED", notes: "Auto-cancelled: payment never completed past rental end date" },
+            })
+            pendingCancelled++
+        } catch (err) {
+            console.error(`[cron] Failed to auto-cancel pending booking ${b.id}:`, err)
+        }
+    }
+
+    return NextResponse.json({
+        activeProcessed:    overdueActive.length,
+        completed,
+        completeFailed,
+        confirmedCancelled,
+        pendingCancelled,
+    })
 }
 
 // Vercel Cron sends GET; POST kept for manual triggers

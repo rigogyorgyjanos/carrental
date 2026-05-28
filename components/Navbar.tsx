@@ -8,11 +8,11 @@ import { getTier } from "@/lib/tiers"
 const NAV_LINKS = [
     { label: "Home",        href: "/" },
     { label: "Cars",        href: "/cars" },
-    { label: "Leaderboard", href: "/leaderboard" },
+    { label: "Programme",   href: "/programme" },
 ]
 
 export default function Navbar() {
-    const { data: session } = useSession()
+    const { data: session } = useSession({ refetchInterval: 120 })
     const [open, setOpen] = useState(false)
     const [scrolled, setScrolled] = useState(false)
 

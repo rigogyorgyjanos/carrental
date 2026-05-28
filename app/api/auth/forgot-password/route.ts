@@ -1,5 +1,3 @@
-"use server";
-
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 import { sendMail } from "@/lib/nodemailer";

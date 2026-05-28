@@ -22,7 +22,8 @@ export default function FeaturedCarsGrid({ initialCars }: Props) {
         <div className="grid md:grid-cols-3 gap-6">
             {initialCars.map(car => {
                 const xp = getXpPerDay(car.category)
-                const imageUrl = car.images[0]?.url || "/placeholder.png"
+                const rawUrl   = car.images[0]?.url
+                const imageUrl = rawUrl?.startsWith("http") ? rawUrl : null
 
                 return (
                     <Link
@@ -31,14 +32,20 @@ export default function FeaturedCarsGrid({ initialCars }: Props) {
                         className="group relative bg-surface border border-surface-3 rounded-2xl overflow-hidden transition-all duration-400 hover:-translate-y-1 hover:border-gold/25 card-glow"
                     >
                         {/* Image */}
-                        <div className="relative h-56 overflow-hidden">
-                            <Image
-                                src={imageUrl}
-                                alt={car.name}
-                                fill
-                                sizes="(max-width: 768px) 100vw, 33vw"
-                                className="object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
+                        <div className="relative h-56 overflow-hidden bg-surface-2">
+                            {imageUrl ? (
+                                <Image
+                                    src={imageUrl}
+                                    alt={car.name}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 33vw"
+                                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-muted text-4xl">🚗</span>
+                                </div>
+                            )}
 
                             {/* Bottom gradient */}
                             <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/20 to-transparent" />
