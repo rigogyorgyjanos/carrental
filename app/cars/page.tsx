@@ -4,6 +4,8 @@ import Filters from "./Filters"
 import Link from "next/link"
 import { Car } from "@/types/types"
 import { buildWhere, buildOrder } from "@/lib/filters"
+import { effectLabel, effectColor } from "@/lib/events"
+import { EventEffectType } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
@@ -26,7 +28,8 @@ export default async function CarsPage({ searchParams }: Props) {
     const where   = buildWhere(params)
     const orderBy = buildOrder(params.sort)
 
-    const [carsRaw, totalCars, maxPriceAgg] = await Promise.all([
+    const now = new Date()
+    const [carsRaw, totalCars, maxPriceAgg, activeEvents] = await Promise.all([
         prisma.product.findMany({
             where,
             take: pageSize,
@@ -36,6 +39,13 @@ export default async function CarsPage({ searchParams }: Props) {
         }),
         prisma.product.count({ where }),
         prisma.product.aggregate({ where: { active: true }, _max: { pricePerDay: true } }),
+        prisma.event.findMany({
+            where: { status: "APPROVED", startsAt: { lte: now }, endsAt: { gte: now } },
+            select: {
+                id: true, title: true, effectType: true, effectValue: true,
+                targetCategories: true, targetBrands: true,
+            },
+        }),
     ])
 
     const rawMax   = maxPriceAgg._max.pricePerDay ?? 500
@@ -61,6 +71,21 @@ export default async function CarsPage({ searchParams }: Props) {
         images:       c.images.map(img => ({ id: img.id, productId: img.productId, url: img.url })),
     }))
 
+    // Build a map: carId → first matching event (for badge display)
+    const carEventMap: Record<string, { title: string; effectType: EventEffectType; effectValue: number }> = {}
+    for (const car of carsRaw) {
+        for (const ev of activeEvents) {
+            const catMatch = ev.targetCategories.length === 0 ||
+                ev.targetCategories.map(c => c.toLowerCase()).includes(car.category.toLowerCase())
+            const brandMatch = ev.targetBrands.length === 0 ||
+                ev.targetBrands.map(b => b.toLowerCase()).includes(car.brand.toLowerCase())
+            if (catMatch && brandMatch) {
+                carEventMap[car.id] = { title: ev.title, effectType: ev.effectType, effectValue: ev.effectValue }
+                break
+            }
+        }
+    }
+
     const totalPages = Math.ceil(totalCars / pageSize)
 
     return (
@@ -80,7 +105,7 @@ export default async function CarsPage({ searchParams }: Props) {
             <Filters maxPrice={maxPrice} />
 
             {/* ── Cars grid ───────────────────────────────────── */}
-            <CarsGrid initialCars={cars} />
+            <CarsGrid initialCars={cars} carEventMap={carEventMap} />
 
             {/* ── Pagination ──────────────────────────────────── */}
             {totalPages > 1 && (

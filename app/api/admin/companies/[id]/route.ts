@@ -65,6 +65,20 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    const activeBookings = await prisma.transaction.count({
+        where: {
+            product: { companyId: id },
+            status:  { in: ["PENDING", "CONFIRMED", "ACTIVE"] },
+        },
+    })
+    if (activeBookings > 0) {
+        return NextResponse.json(
+            { error: `Cannot delete company with ${activeBookings} active booking${activeBookings > 1 ? "s" : ""}` },
+            { status: 409 }
+        )
+    }
+
     await prisma.company.delete({ where: { id } })
     return NextResponse.json({ success: true })
 }

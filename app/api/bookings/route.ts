@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { getTierDiscount, getTier, getXpForRental } from "@/lib/tiers"
+import { getActiveEventsForProduct } from "@/lib/events"
 import { audit } from "@/lib/audit"
 
 const SERVICE_FEE = 10
@@ -80,9 +81,17 @@ export async function POST(req: NextRequest) {
             where: { id: session.user.id },
             select: { xp: true },
         })
-        const discount      = getTierDiscount(dbUser?.xp ?? 0)
+        const tierDiscount  = getTierDiscount(dbUser?.xp ?? 0)
+        const eventEffect   = await getActiveEventsForProduct(
+            product.category, product.brand, start, end, totalDays
+        )
+        const discount      = Math.min(tierDiscount + eventEffect.totalDiscountPct, 0.9) // cap at 90%
         const basePrice     = totalDays * product.pricePerDay
-        const totalPrice    = Math.round((basePrice * (1 - discount) + SERVICE_FEE) * 100) / 100
+        // FREE_DAYS: deduct pricePerDay × freeDays (cheapest day = all days same price)
+        const freeDayDiscount = Math.min(eventEffect.freeDays, totalDays - 1) * product.pricePerDay
+        const totalPrice    = Math.round(
+            (basePrice * (1 - discount) - freeDayDiscount + SERVICE_FEE) * 100
+        ) / 100
         const deposit       = product.deposit ?? Math.round(totalPrice * 0.2 * 100) / 100
 
         // ── Overlap check + create inside a Serializable transaction ─────────
@@ -103,16 +112,18 @@ export async function POST(req: NextRequest) {
 
                 return tx.transaction.create({
                     data: {
-                        userId:          session.user.id,
-                        productId:       product.id,
-                        startDate:       start,
-                        endDate:         end,
+                        userId:               session.user.id,
+                        productId:            product.id,
+                        startDate:            start,
+                        endDate:              end,
                         totalDays,
-                        pricePerDay:     product.pricePerDay,
+                        pricePerDay:          product.pricePerDay,
                         totalPrice,
                         deposit,
-                        discountApplied: discount > 0 ? discount : null,
-                        status:          "PENDING",
+                        discountApplied:      tierDiscount > 0 ? tierDiscount : null,
+                        eventDiscountApplied: eventEffect.totalDiscountPct > 0 ? eventEffect.totalDiscountPct : null,
+                        xpMultiplier:         eventEffect.xpMultiplier,
+                        status:               "PENDING",
                     },
                 })
             }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
@@ -196,15 +207,17 @@ export async function POST(req: NextRequest) {
             userEmail: session.user.email,
             userRole:  session.user.role,
             metadata:  {
-                car:        `${product.brand} ${product.name}`,
-                dates:      `${startDate} → ${endDate}`,
+                car:           `${product.brand} ${product.name}`,
+                dates:         `${startDate} → ${endDate}`,
                 totalDays,
                 totalPrice,
-                discount:   discount > 0 ? `${(discount * 100).toFixed(0)}%` : null,
+                tierDiscount:  tierDiscount > 0 ? `${(tierDiscount * 100).toFixed(0)}%` : null,
+                eventDiscount: eventEffect.totalDiscountPct > 0 ? `${(eventEffect.totalDiscountPct * 100).toFixed(0)}%` : null,
+                events:        eventEffect.appliedEvents.map(e => e.title),
             },
         })
 
-        return NextResponse.json({ ...booking, discountApplied: discount }, { status: 201 })
+        return NextResponse.json({ ...booking, discountApplied: tierDiscount, eventDiscountApplied: eventEffect.totalDiscountPct }, { status: 201 })
     } catch (error) {
         console.error("Booking creation error:", error)
         return NextResponse.json({ error: "Booking failed" }, { status: 500 })

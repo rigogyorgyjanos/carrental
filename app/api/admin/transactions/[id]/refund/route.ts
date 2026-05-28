@@ -24,6 +24,12 @@ export async function POST(
     if (booking.status === "CANCELLED") {
         return NextResponse.json({ error: "Booking is already cancelled" }, { status: 409 })
     }
+    if (booking.status === "ACTIVE") {
+        return NextResponse.json({ error: "Cannot refund an active rental — end the rental first" }, { status: 409 })
+    }
+    if (booking.status === "COMPLETED") {
+        return NextResponse.json({ error: "Cannot refund a completed rental" }, { status: 409 })
+    }
 
     // Issue Stripe refund if a payment was collected
     if (booking.paymentIntentId) {

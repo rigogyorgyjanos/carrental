@@ -6,6 +6,7 @@ import { DayPicker } from "react-day-picker"
 import PriceRangeSlider from "@/components/PriceRangeSlider"
 import "react-day-picker/dist/style.css"
 import LocationAutocomplete from "@/components/LocationAutoComplete"
+import { Calendar, SlidersHorizontal } from "lucide-react"
 
 const SORT_OPTIONS = [
     { value: "",             label: "Recommended"       },
@@ -135,7 +136,7 @@ export default function Filters({ maxPrice = 500 }: { maxPrice?: number }) {
                             onClick={() => { setDraftRange(range); setCalendarOpen(prev => !prev); setSortOpen(false) }}
                             className="flex items-center gap-2 px-4 py-2 text-muted hover:text-white-soft text-sm font-stats transition-colors whitespace-nowrap"
                         >
-                            <span className="text-gold text-xs">📅</span>
+                            <Calendar size={13} className="text-gold shrink-0" />
                             {hasDate
                                 ? range.from && range.to
                                     ? `${formatDate(range.from)} – ${formatDate(range.to)}`
@@ -203,7 +204,7 @@ export default function Filters({ maxPrice = 500 }: { maxPrice?: number }) {
                             activeFilters.length > 0 ? "text-gold" : "text-muted hover:text-white-soft"
                         }`}
                     >
-                        <span className="text-xs">⚙</span>
+                        <SlidersHorizontal size={13} className="shrink-0" />
                         <span>Filters</span>
                         {activeFilters.length > 0 && (
                             <span className="bg-gold text-dark text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -237,7 +238,7 @@ export default function Filters({ maxPrice = 500 }: { maxPrice?: number }) {
                                     : "bg-surface border-surface-3 text-muted"
                             }`}
                         >
-                            <span className="shrink-0">📅</span>
+                            <Calendar size={13} className="shrink-0" />
                             <span className="truncate text-[11px]">
                                 {hasDate
                                     ? range.from && range.to
@@ -306,7 +307,7 @@ export default function Filters({ maxPrice = 500 }: { maxPrice?: number }) {
                                 : "bg-surface border-surface-3 text-muted"
                         }`}
                     >
-                        <span className="shrink-0">⚙</span>
+                        <SlidersHorizontal size={13} className="shrink-0" />
                         <span>Filters</span>
                         {activeFilters.length > 0 && (
                             <span className="bg-gold text-dark text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">

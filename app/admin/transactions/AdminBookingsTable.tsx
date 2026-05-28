@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { User, Calendar } from "lucide-react"
 
 interface BookingRow {
     id:              string
@@ -259,8 +260,8 @@ export default function AdminBookingsTable({
                                         <p className="text-muted text-xs font-stats">{b.category}</p>
 
                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-stats text-muted pt-1">
-                                            <span>👤 {b.userName}</span>
-                                            <span>📅 {fmt(start)} → {fmt(end)} ({b.totalDays}d)</span>
+                                            <span className="flex items-center gap-1"><User size={11} className="shrink-0" />{b.userName}</span>
+                                            <span className="flex items-center gap-1"><Calendar size={11} className="shrink-0" />{fmt(start)} → {fmt(end)} ({b.totalDays}d)</span>
                                         </div>
 
                                         {b.notes && (

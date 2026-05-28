@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import FeaturedCarsGrid from "@/components/FeaturedCarsGrid"
 import HeroSearch from "@/components/HeroSearch"
 import { Car } from "@/types/types"
+import { Search, Calendar, Award, Flag, Map as MapIcon, Star, Gem, Crown, type LucideIcon } from "lucide-react"
 
 // ─── Hero image (replace with your own in /public/hero-car.jpg) ───────────
 const HERO_IMAGE = "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1920&q=80"
@@ -18,11 +19,11 @@ const BRANDS = [
 ]
 
 // ─── Loyalty tiers ────────────────────────────────────────────────────────
-const TIERS = [
+const TIERS: { name: string; xp: string; Icon: LucideIcon; color: string; border: string; benefits: string[] }[] = [
     {
         name: "New Driver",
         xp: "0+",
-        icon: "🏁",
+        Icon: Flag,
         color: "#5A5A6A",
         border: "rgba(90,90,106,0.3)",
         benefits: ["Full fleet access", "Standard support"],
@@ -30,7 +31,7 @@ const TIERS = [
     {
         name: "Road Explorer",
         xp: "200+",
-        icon: "🗺️",
+        Icon: MapIcon,
         color: "#A8A9AD",
         border: "rgba(168,169,173,0.35)",
         benefits: ["5% rental discount", "Early availability alerts"],
@@ -38,7 +39,7 @@ const TIERS = [
     {
         name: "Elite Driver",
         xp: "500+",
-        icon: "⭐",
+        Icon: Star,
         color: "#C9A84C",
         border: "rgba(201,168,76,0.4)",
         benefits: ["10% rental discount", "Free category upgrade"],
@@ -46,7 +47,7 @@ const TIERS = [
     {
         name: "VIP Member",
         xp: "1,000+",
-        icon: "💎",
+        Icon: Gem,
         color: "#3498DB",
         border: "rgba(52,152,219,0.4)",
         benefits: ["15% rental discount", "1 experience drive / year"],
@@ -54,7 +55,7 @@ const TIERS = [
     {
         name: "Dubai Legend",
         xp: "2,000+",
-        icon: "👑",
+        Icon: Crown,
         color: "#9B59B6",
         border: "rgba(155,89,182,0.4)",
         benefits: ["20% rental discount", "Personal concierge"],
@@ -62,22 +63,22 @@ const TIERS = [
 ]
 
 // ─── How it works steps ────────────────────────────────────────────────────
-const STEPS = [
+const STEPS: { number: string; Icon: LucideIcon; title: string; desc: string }[] = [
     {
         number: "01",
-        icon: "🔍",
+        Icon: Search,
         title: "Browse & Choose",
         desc: "Explore our curated fleet of luxury and performance vehicles, filtered by location, date and category.",
     },
     {
         number: "02",
-        icon: "📅",
+        Icon: Calendar,
         title: "Book Instantly",
         desc: "Select your dates, review the pricing, and confirm your reservation in under 60 seconds.",
     },
     {
         number: "03",
-        icon: "⭐",
+        Icon: Award,
         title: "Drive & Earn",
         desc: "Complete your rental to earn XP. Level up, unlock badges, and claim exclusive member benefits.",
     },
@@ -274,8 +275,8 @@ export default async function LandingPage() {
 
                                 {/* Number + icon */}
                                 <div className="relative mb-8">
-                                    <div className="w-24 h-24 rounded-full bg-surface-2 border border-surface-3 group-hover:border-gold/30 flex items-center justify-center text-3xl transition-all duration-300 group-hover:bg-surface-3">
-                                        {step.icon}
+                                    <div className="w-24 h-24 rounded-full bg-surface-2 border border-surface-3 group-hover:border-gold/30 flex items-center justify-center transition-all duration-300 group-hover:bg-surface-3">
+                                        <step.Icon size={36} className="text-gold/70" />
                                     </div>
                                     <span className="absolute -top-2 -right-2 font-stats text-[10px] text-gold/60 font-bold">
                                         {step.number}
@@ -331,7 +332,7 @@ export default async function LandingPage() {
                             />
 
                             {/* Icon */}
-                            <div className="text-3xl mb-4">{tier.icon}</div>
+                            <div className="mb-4"><tier.Icon size={28} style={{ color: tier.color }} /></div>
 
                             {/* XP threshold */}
                             <p

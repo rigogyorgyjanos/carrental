@@ -59,9 +59,14 @@ export async function GET(
         const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000"
 
         const hasMileage = booking.endMileage != null && booking.startMileage != null
-        const excessKm   = hasMileage
-            ? Math.max(0, booking.endMileage! - booking.startMileage!)
-            : null
+        let excessKm: number | null = null
+        if (hasMileage) {
+            const drivenKm   = booking.endMileage! - booking.startMileage!
+            const purchasedKm = booking.extraKmPurchased ?? 0
+            const baseAllowed = p.dailyKmLimit ? p.dailyKmLimit * booking.totalDays : null
+            const allowedKm   = baseAllowed !== null ? baseAllowed + purchasedKm : null
+            excessKm = allowedKm !== null ? Math.max(0, drivenKm - allowedKm) : null
+        }
         const description = excessKm != null
             ? `${excessKm.toLocaleString()} km over limit × €${p.excessKmFee}/km`
             : `Excess km charge — ${p.brand} ${p.name}`

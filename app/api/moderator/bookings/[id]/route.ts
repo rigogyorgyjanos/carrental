@@ -251,20 +251,32 @@ export async function PATCH(
         })
     }
 
-    // ── Other transitions ────────────────────────────────────────────────────
+    // ── Other transitions (PENDING/CONFIRMED → CANCELLED) ────────────────────
+    // Issue Stripe refund before cancelling if a payment was collected
+    if (newStatus === "CANCELLED" && booking.paymentIntentId) {
+        try {
+            await stripe.refunds.create({ payment_intent: booking.paymentIntentId })
+        } catch (err: any) {
+            if (err?.code !== "charge_already_refunded") {
+                console.error("Stripe refund failed on moderator cancel:", err)
+                return NextResponse.json({ error: "Stripe refund failed — booking not cancelled" }, { status: 502 })
+            }
+        }
+    }
+
     const updated = await prisma.transaction.update({
         where: { id },
         data:  { status: newStatus as any, ...(notes !== undefined ? { notes } : {}) },
     })
 
     audit({
-        action:    "booking.status_changed",
+        action:    newStatus === "CANCELLED" ? "booking.cancelled_by_moderator" : "booking.status_changed",
         entity:    "booking",
         entityId:  id,
         userId:    session.user.id,
         userEmail: session.user.email,
         userRole:  session.user.role,
-        metadata:  { from: booking.status, to: newStatus },
+        metadata:  { from: booking.status, to: newStatus, refunded: newStatus === "CANCELLED" && !!booking.paymentIntentId },
     })
 
     return NextResponse.json(updated)

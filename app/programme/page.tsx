@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { TIERS, getXpPerDay } from "@/lib/tiers"
 import { BADGE_DEFS } from "@/lib/gamification"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 const TIER_ICONS: Record<string, string> = {
     "New Driver":    "🚗",
@@ -35,7 +37,10 @@ const HOW_IT_WORKS = [
     },
 ]
 
-export default function ProgrammePage() {
+export default async function ProgrammePage() {
+    const session = await getServerSession(authOptions)
+    const isLoggedIn = !!session?.user
+
     return (
         <div className="min-h-screen bg-dark">
             <div className="max-w-4xl mx-auto px-6 py-16 space-y-24">
@@ -59,12 +64,21 @@ export default function ProgrammePage() {
                         >
                             Browse vehicles →
                         </Link>
-                        <Link
-                            href="/register"
-                            className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
-                        >
-                            Create account
-                        </Link>
+                        {isLoggedIn ? (
+                            <Link
+                                href="/profile"
+                                className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
+                            >
+                                My Profile
+                            </Link>
+                        ) : (
+                            <Link
+                                href="/register"
+                                className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
+                            >
+                                Create account
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -191,21 +205,42 @@ export default function ProgrammePage() {
                         Ready to start earning?
                     </h2>
                     <p className="text-muted text-sm font-stats max-w-md mx-auto leading-relaxed">
-                        Create a free account, make your first booking, and your XP counter starts ticking from day one.
+                        {isLoggedIn
+                            ? "Your XP is already counting. Check your profile to see your current tier, progress, and badges."
+                            : "Create a free account, make your first booking, and your XP counter starts ticking from day one."}
                     </p>
                     <div className="flex flex-wrap justify-center gap-3 pt-2">
-                        <Link
-                            href="/register"
-                            className="bg-gold hover:bg-gold-light text-dark font-body font-semibold px-8 py-3.5 rounded-full text-sm transition-colors"
-                        >
-                            Join AURUM →
-                        </Link>
-                        <Link
-                            href="/cars"
-                            className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
-                        >
-                            Browse vehicles
-                        </Link>
+                        {isLoggedIn ? (
+                            <>
+                                <Link
+                                    href="/profile"
+                                    className="bg-gold hover:bg-gold-light text-dark font-body font-semibold px-8 py-3.5 rounded-full text-sm transition-colors"
+                                >
+                                    My Profile →
+                                </Link>
+                                <Link
+                                    href="/cars"
+                                    className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
+                                >
+                                    Browse vehicles
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/register"
+                                    className="bg-gold hover:bg-gold-light text-dark font-body font-semibold px-8 py-3.5 rounded-full text-sm transition-colors"
+                                >
+                                    Join AURUM →
+                                </Link>
+                                <Link
+                                    href="/cars"
+                                    className="border border-surface-3 hover:border-gold/30 text-muted hover:text-white-soft font-stats px-8 py-3.5 rounded-full text-sm transition-colors"
+                                >
+                                    Browse vehicles
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
 

@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
+import { ChevronUp, ChevronDown } from "lucide-react"
 
 interface RecentBooking {
     id:      string
@@ -111,12 +113,12 @@ export default function ModeratorUsersPage() {
                                 {/* Collapsed row */}
                                 <button
                                     onClick={() => setExpanded(isOpen ? null : u.id)}
-                                    className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-surface-2 transition-colors"
+                                    className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-surface-2 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-gold/30 focus-visible:outline-none"
                                 >
                                     {/* Avatar */}
                                     <div className="shrink-0">
                                         {u.image ? (
-                                            <img src={u.image} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                            <Image src={u.image} alt="" width={40} height={40} className="rounded-full object-cover" />
                                         ) : (
                                             <div className="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center text-muted text-sm font-stats font-semibold">
                                                 {(u.name ?? u.email)[0].toUpperCase()}
@@ -154,7 +156,10 @@ export default function ModeratorUsersPage() {
                                         )}
                                     </div>
 
-                                    <span className="text-muted text-sm shrink-0">{isOpen ? "▲" : "▼"}</span>
+                                    {isOpen
+                                        ? <ChevronUp className="w-4 h-4 text-muted shrink-0" />
+                                        : <ChevronDown className="w-4 h-4 text-muted shrink-0" />
+                                    }
                                 </button>
 
                                 {/* Expanded */}

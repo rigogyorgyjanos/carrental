@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Car } from "@/types/types"
 import { getXpPerDay } from "@/lib/tiers"
+import { Car as CarIcon } from "lucide-react"
 
 interface Props {
     initialCars: Car[]
@@ -43,7 +44,7 @@ export default function FeaturedCarsGrid({ initialCars }: Props) {
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <span className="text-muted text-4xl">🚗</span>
+                                    <CarIcon size={48} className="text-muted" />
                                 </div>
                             )}
 

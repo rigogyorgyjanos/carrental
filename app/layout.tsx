@@ -1,7 +1,7 @@
 import "./globals.css"
 import { Cormorant_Garamond, DM_Sans, Space_Grotesk } from "next/font/google"
 import SessionProviderWrapper from "./SessionProviderWrapper"
-import Navbar from "@/components/Navbar"
+import ConditionalNavbar from "@/components/ConditionalNavbar"
 import CookieConsent from "@/components/CookieConsent"
 import NavigationLoader from "@/components/NavigationLoader"
 
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${cormorant.variable} ${dmSans.variable} ${spaceGrotesk.variable} font-body bg-dark text-white-soft`}>
         <SessionProviderWrapper>
           <NavigationLoader />
-          <Navbar />
+          <ConditionalNavbar />
           {children}
           <CookieConsent />
         </SessionProviderWrapper>

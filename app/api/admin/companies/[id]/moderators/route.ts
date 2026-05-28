@@ -20,6 +20,9 @@ export async function POST(
     if (!name?.trim() || !email?.trim() || !password?.trim()) {
         return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 })
     }
+    if (password.length < 8) {
+        return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
+    }
 
     const company = await prisma.company.findUnique({ where: { id: companyId } })
     if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 })

@@ -5,6 +5,7 @@ export type AuditAction =
     | "booking.created"
     | "booking.cancelled_by_user"
     | "booking.cancelled_by_admin"
+    | "booking.cancelled_by_moderator"
     | "booking.dates_edited"
     | "booking.activated"
     | "booking.completed"
@@ -25,6 +26,18 @@ export type AuditAction =
     | "review.submitted"
     | "review.approved"
     | "review.rejected"
+    // Payments (extended)
+    | "payment.damage_paid"
+    // Events
+    | "event.created"
+    | "event.updated"
+    | "event.deleted"
+    | "event.approved"
+    | "event.rejected"
+    // Penalties
+    | "penalty.issued"
+    | "penalty.cancelled"
+    | "penalty.paid"
     // Users
     | "user.registered"
     | "user.edited"

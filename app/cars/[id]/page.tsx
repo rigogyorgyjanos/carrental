@@ -6,6 +6,11 @@ import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { getXpPerDay } from "@/lib/tiers"
+import {
+    Zap, Gauge, Wind, Wrench, Trophy, Sparkles, Settings2, Gem, Crown,
+    Calendar, Shield, Timer, Fuel, Users, Route, MapPin, Ruler,
+    type LucideIcon,
+} from "lucide-react"
 
 // ── Auto-generate highlights from car data ─────────────────────────────────
 function getHighlights(car: {
@@ -18,47 +23,47 @@ function getHighlights(car: {
     drivetrain?: string | null
     category: string
     year: number
-}): { icon: string; text: string }[] {
-    const h: { icon: string; text: string }[] = []
+}): { Icon: LucideIcon; text: string }[] {
+    const h: { Icon: LucideIcon; text: string }[] = []
 
     if (car.horsepower && car.horsepower >= 500)
-        h.push({ icon: "🔥", text: `${car.horsepower} HP high-performance powerplant` })
+        h.push({ Icon: Zap,      text: `${car.horsepower} HP high-performance powerplant` })
     else if (car.horsepower && car.horsepower >= 300)
-        h.push({ icon: "⚡", text: `${car.horsepower} HP sports-tuned engine` })
+        h.push({ Icon: Zap,      text: `${car.horsepower} HP sports-tuned engine` })
 
     if (car.zeroToHundred && car.zeroToHundred <= 3)
-        h.push({ icon: "🏎", text: `0–100 km/h in just ${car.zeroToHundred}s` })
+        h.push({ Icon: Gauge,    text: `0–100 km/h in just ${car.zeroToHundred}s` })
     else if (car.zeroToHundred && car.zeroToHundred <= 5)
-        h.push({ icon: "⚡", text: `0–100 km/h in ${car.zeroToHundred}s` })
+        h.push({ Icon: Timer,    text: `0–100 km/h in ${car.zeroToHundred}s` })
 
     if (car.topSpeed && car.topSpeed >= 300)
-        h.push({ icon: "💨", text: `${car.topSpeed} km/h top speed` })
+        h.push({ Icon: Wind,     text: `${car.topSpeed} km/h top speed` })
     else if (car.topSpeed && car.topSpeed >= 250)
-        h.push({ icon: "💨", text: `${car.topSpeed} km/h maximum speed` })
+        h.push({ Icon: Wind,     text: `${car.topSpeed} km/h maximum speed` })
 
     if (car.drivetrain === "AWD" || car.drivetrain === "4WD")
-        h.push({ icon: "🔧", text: `${car.drivetrain} — superior traction in all conditions` })
+        h.push({ Icon: Wrench,   text: `${car.drivetrain} — superior traction in all conditions` })
     else if (car.drivetrain === "RWD")
-        h.push({ icon: "🔧", text: "Rear-wheel drive — pure, engaging driving experience" })
+        h.push({ Icon: Wrench,   text: "Rear-wheel drive — pure, engaging driving experience" })
 
     if (car.seats === 2)
-        h.push({ icon: "🏆", text: "Exclusive 2-seat sports configuration" })
+        h.push({ Icon: Trophy,   text: "Exclusive 2-seat sports configuration" })
 
     if (car.mileage < 5000)
-        h.push({ icon: "✨", text: `Near-new condition — only ${car.mileage.toLocaleString()} km` })
+        h.push({ Icon: Sparkles, text: `Near-new condition — only ${car.mileage.toLocaleString()} km` })
 
     if (car.transmission?.toLowerCase().includes("auto"))
-        h.push({ icon: "⚙", text: "Smooth automatic transmission" })
+        h.push({ Icon: Settings2, text: "Smooth automatic transmission" })
 
     const cat = car.category.toLowerCase()
     if (cat.includes("luxury"))
-        h.push({ icon: "💎", text: "Luxury interior with premium finishes" })
+        h.push({ Icon: Gem,      text: "Luxury interior with premium finishes" })
     if (cat.includes("super") || cat.includes("hyper"))
-        h.push({ icon: "👑", text: "Supercar performance and exclusivity" })
+        h.push({ Icon: Crown,    text: "Supercar performance and exclusivity" })
 
     if (h.length < 3) {
-        h.push({ icon: "📅", text: `${car.year} model year` })
-        h.push({ icon: "🛡", text: "Fully insured and regularly serviced" })
+        h.push({ Icon: Calendar, text: `${car.year} model year` })
+        h.push({ Icon: Shield,   text: "Fully insured and regularly serviced" })
     }
 
     return h.slice(0, 5)
@@ -132,21 +137,21 @@ export default async function CarPage({ params, searchParams }: { params: Promis
     const xpPerDay   = getXpPerDay(car.category)
     const highlights = getHighlights(car)
 
-    const specs: { icon: string; label: string; value: string }[] = [
-        car.horsepower    ? { icon: "⚡", label: "Power",       value: `${car.horsepower} HP` }       : null,
-        car.zeroToHundred ? { icon: "⏱", label: "0–100 km/h", value: `${car.zeroToHundred}s` }       : null,
-        car.topSpeed      ? { icon: "🏎", label: "Top Speed",  value: `${car.topSpeed} km/h` }        : null,
-        { icon: "⛽", label: "Fuel",        value: car.fuelType },
-        { icon: "⚙", label: "Gearbox",    value: car.transmission },
-        car.drivetrain    ? { icon: "🔧", label: "Drivetrain", value: car.drivetrain }                : null,
-        { icon: "👥", label: "Seats",      value: `${car.seats} seats` },
-        { icon: "📅", label: "Year",       value: car.year.toString() },
-        { icon: "🛣", label: "Mileage",    value: `${car.mileage.toLocaleString()} km` },
-        { icon: "📍", label: "Location",   value: car.location },
+    const specs: { Icon: LucideIcon; label: string; value: string }[] = [
+        car.horsepower    ? { Icon: Zap,      label: "Power",           value: `${car.horsepower} HP` }          : null,
+        car.zeroToHundred ? { Icon: Timer,    label: "0–100 km/h",     value: `${car.zeroToHundred}s` }         : null,
+        car.topSpeed      ? { Icon: Gauge,    label: "Top Speed",      value: `${car.topSpeed} km/h` }          : null,
+        { Icon: Fuel,       label: "Fuel",        value: car.fuelType },
+        { Icon: Settings2,  label: "Gearbox",     value: car.transmission },
+        car.drivetrain    ? { Icon: Wrench,   label: "Drivetrain",     value: car.drivetrain }                  : null,
+        { Icon: Users,      label: "Seats",       value: `${car.seats} seats` },
+        { Icon: Calendar,   label: "Year",        value: car.year.toString() },
+        { Icon: Route,      label: "Mileage",     value: `${car.mileage.toLocaleString()} km` },
+        { Icon: MapPin,     label: "Location",    value: car.location },
         car.dailyKmLimit != null
-            ? { icon: "📏", label: "Daily km limit", value: `${car.dailyKmLimit} km/day` }
-            : { icon: "♾", label: "Mileage policy", value: "Unlimited km" },
-    ].filter(Boolean) as { icon: string; label: string; value: string }[]
+            ? { Icon: Ruler,  label: "Daily km limit",  value: `${car.dailyKmLimit} km/day` }
+            : { Icon: Route,  label: "Mileage policy",  value: "Unlimited km" },
+    ].filter(Boolean) as { Icon: LucideIcon; label: string; value: string }[]
 
     return (
         <div className="bg-dark min-h-screen">
@@ -200,7 +205,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                                     </span>
                                 )}
                                 <span className="text-surface-3">·</span>
-                                <span className="text-muted">📍 {car.location}</span>
+                                <span className="text-muted flex items-center gap-1"><MapPin size={13} className="shrink-0" />{car.location}</span>
                                 <span className="text-surface-3">·</span>
                                 <span className="flex items-center gap-1 text-gold/80">
                                     <span className="text-[9px]">◆</span>
@@ -220,7 +225,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                                         key={s.label}
                                         className="bg-surface border border-surface-3 rounded-xl px-4 py-3 flex items-start gap-3"
                                     >
-                                        <span className="text-lg leading-none mt-0.5 shrink-0">{s.icon}</span>
+                                        <s.Icon size={18} className="text-gold/70 mt-0.5 shrink-0" />
                                         <div className="min-w-0">
                                             <p className="text-muted-2 text-[10px] font-stats uppercase tracking-wider mb-0.5">
                                                 {s.label}
@@ -259,7 +264,7 @@ export default async function CarPage({ params, searchParams }: { params: Promis
                                         key={i}
                                         className="flex items-center gap-4 bg-surface border border-surface-3 rounded-xl px-5 py-4 hover:border-gold/20 transition-colors duration-200"
                                     >
-                                        <span className="text-2xl shrink-0">{h.icon}</span>
+                                        <h.Icon size={22} className="text-gold/80 shrink-0" />
                                         <span className="font-body text-white-soft text-sm">
                                             {h.text}
                                         </span>

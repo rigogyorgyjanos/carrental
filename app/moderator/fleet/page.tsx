@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { Car as CarIcon } from "lucide-react"
 
 interface Car {
     id: string; name: string; brand: string; category: string
@@ -108,7 +109,7 @@ export default function ModeratorFleetPage() {
                 <div className="text-center py-12 text-muted font-stats">Loading…</div>
             ) : filtered.length === 0 ? (
                 <div className="bg-surface border border-surface-3 rounded-2xl px-6 py-14 text-center">
-                    <p className="text-muted text-4xl mb-4">🚗</p>
+                    <CarIcon size={48} className="text-muted mb-4" />
                     <p className="text-white-soft font-heading text-xl mb-2">No cars {tab !== "ALL" ? `with status ${tab}` : "yet"}</p>
                     {tab === "ALL" && (
                         <Link href="/moderator/fleet/new" className="text-gold text-sm font-stats hover:underline">
@@ -128,7 +129,7 @@ export default function ModeratorFleetPage() {
                                     </div>
                                 ) : (
                                     <div className="w-full sm:w-36 h-32 sm:h-auto shrink-0 bg-surface-2 flex items-center justify-center">
-                                        <span className="text-muted text-2xl">🚗</span>
+                                        <CarIcon size={28} className="text-muted" />
                                     </div>
                                 )}
                                 <div className="flex-1 p-5 flex flex-col sm:flex-row justify-between gap-4">

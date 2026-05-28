@@ -65,7 +65,7 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
                 })
                 setBookedDates(dates)
             })
-            .catch(() => {})
+            .catch(err => console.error("[BookingForm] Failed to load booked dates:", err))
     }, [carId])
 
     // ── Derived values ───────────────────────────────────────────────────
@@ -241,7 +241,7 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
                         <button
                             type="button"
                             onClick={() => { setRange(undefined); setStatus("idle"); setErrorMsg("") }}
-                            className="flex items-center gap-1.5 text-xs font-stats text-muted hover:text-danger border border-surface-3 hover:border-danger/30 bg-surface-2 hover:bg-danger/5 px-4 py-1.5 rounded-full transition-all duration-200"
+                            className="flex items-center gap-1.5 text-xs font-stats text-muted hover:text-danger border border-surface-3 hover:border-danger/30 bg-surface-2 hover:bg-danger/5 px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
                         >
                             <span className="text-[10px]">✕</span>
                             Clear dates
@@ -357,7 +357,7 @@ export default function BookingForm({ carId, pricePerDay, category = "", deposit
                 <button
                     onClick={handleBooking}
                     disabled={status === "loading"}
-                    className="w-full bg-gold hover:bg-gold-light disabled:opacity-60 disabled:cursor-not-allowed text-dark font-body font-semibold py-4 rounded-xl transition-colors duration-200 text-sm"
+                    className="w-full bg-gold hover:bg-gold-light disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer text-dark font-body font-semibold py-4 rounded-xl transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-dark"
                 >
                     {status === "loading"
                         ? "Processing…"

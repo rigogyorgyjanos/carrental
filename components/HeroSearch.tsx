@@ -7,6 +7,7 @@ import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
 import { format, startOfDay } from "date-fns"
 import type { DateRange } from "react-day-picker"
+import { Calendar } from "lucide-react"
 
 export default function HeroSearch() {
     const router = useRouter()
@@ -114,7 +115,7 @@ export default function HeroSearch() {
                                 : "bg-surface-2/60 hover:bg-surface-2/80"
                         }`}
                     >
-                        <span className="text-muted text-sm shrink-0" aria-hidden>📅</span>
+                        <Calendar size={16} className="text-muted shrink-0" aria-hidden />
                         {dateLabel ? (
                             <>
                                 <span className="text-white-soft whitespace-nowrap font-stats">{dateLabel}</span>
@@ -138,7 +139,7 @@ export default function HeroSearch() {
                 {/* ── Search CTA ──────────────────────────────────── */}
                 <button
                     onClick={handleSearch}
-                    className="bg-gold hover:bg-gold-light text-dark text-sm font-body font-semibold px-6 py-3 rounded-xl transition-colors duration-200 shrink-0 whitespace-nowrap"
+                    className="bg-gold hover:bg-gold-light text-dark text-sm font-body font-semibold px-6 py-3 rounded-xl transition-colors duration-200 shrink-0 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-dark"
                 >
                     Find Cars →
                 </button>

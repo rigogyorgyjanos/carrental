@@ -21,13 +21,16 @@ export async function POST(req: Request) {
     const resetUrl = `${process.env.NEXTAUTH_URL}/login?token=${token}`;
 
 
-    // send email
-    await sendMail({
-        from: `"Car Rental" <${process.env.ETHEREAL_USER}>`,
-        to: user.email,
-        subject: "Password reset request",
-        html: `<p>Click the link to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
-    });
+    try {
+        await sendMail({
+            from: `"Car Rental" <${process.env.ETHEREAL_USER}>`,
+            to: user.email,
+            subject: "Password reset request",
+            html: `<p>Click the link to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
+        });
+    } catch (err) {
+        console.error("[forgot-password] Email send failed:", err);
+    }
 
     return new Response("If account exists, email sent", { status: 200 });
 }

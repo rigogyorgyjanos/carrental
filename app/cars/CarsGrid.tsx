@@ -4,14 +4,24 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { MapPin, Star, Gem, ArrowRight } from "lucide-react"
 import { Car } from "@/types/types"
 import { getXpPerDay } from "@/lib/tiers"
+import { effectLabel, effectColor } from "@/lib/eventUtils"
+import { EventEffectType } from "@prisma/client"
 
-interface Props {
-    initialCars: Car[]
+interface ActiveEvent {
+    title:       string
+    effectType:  EventEffectType
+    effectValue: number
 }
 
-export default function CarsGrid({ initialCars }: Props) {
+interface Props {
+    initialCars:  Car[]
+    carEventMap?: Record<string, ActiveEvent>
+}
+
+export default function CarsGrid({ initialCars, carEventMap = {} }: Props) {
     const [cars, setCars] = useState<Car[]>(initialCars)
     const searchParams    = useSearchParams()
     const from = searchParams.get("from")
@@ -40,6 +50,9 @@ export default function CarsGrid({ initialCars }: Props) {
                 const rawUrl   = car.images[0]?.url
                 const imageUrl = rawUrl?.startsWith("http") ? rawUrl : null
 
+                const activeEvent = carEventMap[car.id] ?? null
+                const evClr = activeEvent ? effectColor(activeEvent.effectType) : null
+
                 return (
                     <Link
                         key={car.id}
@@ -60,9 +73,19 @@ export default function CarsGrid({ initialCars }: Props) {
                         {/* Always-on bottom gradient */}
                         <div className="absolute inset-0 bg-linear-to-t from-dark/95 via-dark/20 to-transparent" />
 
+                        {/* Event badge — top left */}
+                        {activeEvent && evClr && (
+                            <div
+                                className="absolute top-3 left-3 z-10 text-[10px] font-stats font-bold px-2.5 py-1 rounded-full border backdrop-blur-sm"
+                                style={{ color: evClr.text, background: evClr.bg + "cc", borderColor: evClr.border }}
+                            >
+                                {effectLabel(activeEvent.effectType, activeEvent.effectValue)}
+                            </div>
+                        )}
+
                         {/* XP chip — top right, always visible */}
                         <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-dark/80 backdrop-blur-sm border border-gold/35 text-gold text-[10px] font-stats font-bold px-2.5 py-1 rounded-full">
-                            <span className="text-[8px]">◆</span>
+                            <Gem className="w-2.5 h-2.5" />
                             +{xp} XP/day
                         </div>
 
@@ -95,8 +118,8 @@ export default function CarsGrid({ initialCars }: Props) {
                                     </span>
                                     <span className="text-muted text-xs font-stats">/day</span>
                                 </div>
-                                <span className="text-[10px] font-stats text-gold/60">
-                                    ◆ Earn {xp}+ XP
+                                <span className="flex items-center gap-1 text-[10px] font-stats text-gold/60">
+                                    <Gem className="w-2.5 h-2.5" /> Earn {xp}+ XP
                                 </span>
                             </div>
 
@@ -110,19 +133,21 @@ export default function CarsGrid({ initialCars }: Props) {
                                 {car.rating > 0 && (
                                     <>
                                         <span className="text-surface-3">·</span>
-                                        <span className="text-gold/70">★ {car.rating}</span>
+                                        <span className="flex items-center gap-0.5 text-gold/70">
+                                            <Star className="w-2.5 h-2.5 fill-current" /> {car.rating}
+                                        </span>
                                     </>
                                 )}
                             </div>
 
                             {/* Location + CTA */}
                             <div className="flex items-center justify-between">
-                                <span className="text-muted text-[10px] font-stats truncate mr-2">
-                                    📍 {car.location}
+                                <span className="flex items-center gap-1 text-muted text-[10px] font-stats truncate mr-2">
+                                    <MapPin className="w-3 h-3 shrink-0" /> {car.location}
                                 </span>
                                 <div className="shrink-0 flex items-center gap-1 bg-gold text-dark text-[11px] font-semibold px-3.5 py-2 rounded-lg transition-colors group-hover:bg-gold-light">
                                     View
-                                    <span>→</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                 </div>
                             </div>
 

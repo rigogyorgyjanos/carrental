@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
+import { Car as CarIcon } from "lucide-react"
 
 interface PendingCar {
     id:          string
@@ -32,7 +33,7 @@ export default function AdminPendingPage() {
         fetch(`/api/admin/products/pending`)
             .then(r => r.json())
             .then(data => { setCars(data); setLoading(false) })
-            .catch(() => setLoading(false))
+            .catch(err => { console.error("[admin/pending] Failed to load:", err); setLoading(false) })
     }
 
     useEffect(() => { load() }, [])
@@ -104,7 +105,7 @@ export default function AdminPendingPage() {
                                     </div>
                                 ) : (
                                     <div className="w-full sm:w-48 h-40 sm:h-auto shrink-0 bg-surface-2 flex items-center justify-center">
-                                        <span className="text-muted text-3xl">🚗</span>
+                                        <CarIcon size={36} className="text-muted" />
                                     </div>
                                 )}
 
@@ -150,14 +151,14 @@ export default function AdminPendingPage() {
                                                 <button
                                                     onClick={() => handleAction(car.id, "approve")}
                                                     disabled={acting === car.id}
-                                                    className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-xs font-stats font-semibold transition-all disabled:opacity-50"
+                                                    className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-xs font-stats font-semibold transition-all disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                                                 >
                                                     {acting === car.id ? "Processing…" : "✓ Approve"}
                                                 </button>
                                                 <button
                                                     onClick={() => handleAction(car.id, "reject")}
                                                     disabled={acting === car.id}
-                                                    className="flex-1 py-2.5 rounded-xl bg-danger/10 border border-danger/25 text-danger hover:bg-danger/20 text-xs font-stats font-semibold transition-all disabled:opacity-50"
+                                                    className="flex-1 py-2.5 rounded-xl bg-danger/10 border border-danger/25 text-danger hover:bg-danger/20 text-xs font-stats font-semibold transition-all disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
                                                 >
                                                     {acting === car.id ? "Processing…" : "✕ Reject"}
                                                 </button>

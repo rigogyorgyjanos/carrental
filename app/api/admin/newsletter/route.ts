@@ -39,26 +39,33 @@ export async function POST(req: NextRequest) {
     let sent   = 0
     let failed = 0
 
-    for (const user of recipients) {
-        if (!user.email) continue
-        try {
-            await sendMail({
-                to:      user.email,
-                subject: subject.trim(),
-                html:    newsletterHtml({
-                    subject:        subject.trim(),
-                    body:           body.trim(),
-                    appUrl,
-                    recipientEmail: user.email,
-                    recipientName:  user.name ?? undefined,
-                    ctaLabel:       ctaLabel?.trim() || undefined,
-                    ctaUrl:         ctaUrl?.trim()   || undefined,
-                }),
-            })
-            sent++
-        } catch (err) {
-            console.error(`[newsletter] Failed to send to ${user.email}:`, err)
-            failed++
+    // Concurrency limit — send up to 10 emails in parallel, avoid SMTP/serverless timeout
+    const CONCURRENCY = 10
+    const queue = [...recipients]
+    while (queue.length > 0) {
+        const batch = queue.splice(0, CONCURRENCY)
+        const results = await Promise.allSettled(
+            batch
+                .filter(user => !!user.email)
+                .map(user =>
+                    sendMail({
+                        to:      user.email!,
+                        subject: subject.trim(),
+                        html:    newsletterHtml({
+                            subject:        subject.trim(),
+                            body:           body.trim(),
+                            appUrl,
+                            recipientEmail: user.email!,
+                            recipientName:  user.name ?? undefined,
+                            ctaLabel:       ctaLabel?.trim() || undefined,
+                            ctaUrl:         ctaUrl?.trim()   || undefined,
+                        }),
+                    })
+                )
+        )
+        for (const r of results) {
+            if (r.status === "fulfilled") sent++
+            else { console.error("[newsletter] Failed to send:", r.reason); failed++ }
         }
     }
 

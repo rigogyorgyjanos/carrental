@@ -29,8 +29,33 @@ export async function POST(req: NextRequest) {
 
     if (event.type === "checkout.session.completed") {
         const session   = event.data.object as Stripe.Checkout.Session
-        const bookingId = session.metadata?.bookingId
         const type      = session.metadata?.type
+
+        // ── Penalty payment ──────────────────────────────────────────────────
+        if (type === "penalty") {
+            const penaltyUserId = session.metadata?.userId
+            if (penaltyUserId) {
+                const penalty = await prisma.penalty.findFirst({
+                    where: { stripeSessionId: session.id },
+                })
+                if (penalty && penalty.status === "UNPAID") {
+                    await prisma.penalty.update({
+                        where: { id: penalty.id },
+                        data:  { status: "PAID", paidAt: new Date() },
+                    })
+                    audit({
+                        action:   "penalty.paid",
+                        entity:   "penalty",
+                        entityId: penalty.id,
+                        userId:   null,
+                        metadata: { amount: penalty.amount, stripeSessionId: session.id },
+                    })
+                }
+            }
+            return NextResponse.json({ received: true })
+        }
+
+        const bookingId = session.metadata?.bookingId
 
         if (!bookingId) {
             console.error("Webhook: no bookingId in metadata", session.id)

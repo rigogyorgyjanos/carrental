@@ -9,6 +9,7 @@ import ProfileActions from "./ProfileActions"
 import DeleteAccountButton from "./DeleteAccountButton"
 import ProfileSettings from "@/components/ProfileSettings"
 import XpLogList from "./XpLogList"
+import { Crown, Gem, Zap, Map as MapIcon, Car as CarIcon, Settings } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -162,14 +163,15 @@ export default async function ProfilePage() {
                         )}
                         {/* Tier icon dot */}
                         <span
-                            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-dark flex items-center justify-center text-sm"
+                            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-dark flex items-center justify-center"
                             style={{ background: tier.color }}
                             title={tier.name}
                         >
-                            {tier.name === "Dubai Legend" ? "🌟" :
-                             tier.name === "VIP Member"   ? "👑" :
-                             tier.name === "Elite Driver" ? "⚡" :
-                             tier.name === "Road Explorer"? "🗺" : "🚗"}
+                            {tier.name === "Dubai Legend" ? <Crown size={14} className="text-dark" /> :
+                             tier.name === "VIP Member"   ? <Gem   size={14} className="text-dark" /> :
+                             tier.name === "Elite Driver" ? <Zap   size={14} className="text-dark" /> :
+                             tier.name === "Road Explorer"? <MapIcon size={14} className="text-dark" /> :
+                                                            <CarIcon size={14} className="text-dark" />}
                         </span>
                     </div>
 
@@ -204,7 +206,7 @@ export default async function ProfilePage() {
                                 href="/admin"
                                 className="inline-flex items-center gap-2 text-xs font-stats px-4 py-2 rounded-xl border border-gold/30 text-gold bg-gold/8 hover:bg-gold/15 hover:border-gold/50 transition-colors"
                             >
-                                ⚙ Admin Dashboard
+                                <Settings size={13} className="shrink-0" /> Admin Dashboard
                             </Link>
                         )}
                         {(session.user.role === "MODERATOR" || session.user.role === "ADMIN") && (

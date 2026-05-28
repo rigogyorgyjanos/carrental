@@ -114,7 +114,11 @@ export default function ModeratorBookingsPage() {
                 if (!r.ok) throw new Error(`Server error ${r.status}`)
                 return r.json()
             })
-            .then((data: Booking[]) => { setBookings(data); setLoading(false) })
+            .then((data: Booking[] | { bookings: Booking[] }) => {
+                const list = Array.isArray(data) ? data : data.bookings
+                setBookings(list)
+                setLoading(false)
+            })
             .catch((err) => {
                 setLoadError(err?.message ?? "Failed to load bookings. Please refresh.")
                 setLoading(false)

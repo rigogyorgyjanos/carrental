@@ -71,9 +71,11 @@ export async function DELETE(
             try {
                 await stripe.refunds.create({ payment_intent: existing.paymentIntentId })
             } catch (refundErr: any) {
-                // If already refunded (e.g. admin already issued one), skip silently
-                if (refundErr?.code !== "charge_already_refunded") {
-                    console.error("Stripe refund failed (cancellation proceeds):", refundErr)
+                if (refundErr?.code === "charge_already_refunded") {
+                    // already refunded — safe to proceed
+                } else {
+                    console.error("Stripe refund failed:", refundErr)
+                    return NextResponse.json({ error: "Refund failed — please contact support" }, { status: 502 })
                 }
             }
         }
@@ -115,6 +117,9 @@ export async function PUT(
     if (!bookingId || !startDate || !endDate)
         return NextResponse.json({ error: "Missing booking data" }, { status: 400 })
 
+    // Lazy import to avoid bundling server-only lib when this file is tree-shaken
+    const { getActiveEventsForProduct } = await import("@/lib/events")
+
     if (typeof startDate !== "string" || typeof endDate !== "string" || !DATE_RE.test(startDate) || !DATE_RE.test(endDate))
         return NextResponse.json({ error: "Invalid date format — expected YYYY-MM-DD" }, { status: 400 })
 
@@ -143,11 +148,16 @@ export async function PUT(
                 { status: 400 }
             )
 
-        // Preserve the discount that was locked in at booking creation time
-        const discount   = existing.discountApplied ?? 0
-        const basePrice  = totalDays * existing.product.pricePerDay
-        const totalPrice = Math.round((basePrice * (1 - discount) + SERVICE_FEE) * 100) / 100
-        const deposit    = existing.product.deposit ?? Math.round(totalPrice * 0.2 * 100) / 100
+        // Re-check active events for the new date range
+        const tierDiscount  = existing.discountApplied ?? 0
+        const eventEffect   = await getActiveEventsForProduct(
+            existing.product.category, existing.product.brand, start, end, totalDays
+        )
+        const discount      = Math.min(tierDiscount + eventEffect.totalDiscountPct, 0.9)
+        const basePrice     = totalDays * existing.product.pricePerDay
+        const freeDayDiscount = Math.min(eventEffect.freeDays, totalDays - 1) * existing.product.pricePerDay
+        const totalPrice    = Math.round((basePrice * (1 - discount) - freeDayDiscount + SERVICE_FEE) * 100) / 100
+        const deposit       = existing.product.deposit ?? Math.round(totalPrice * 0.2 * 100) / 100
 
         // Serializable transaction: overlap check + update are atomic to prevent race conditions
         let updated
@@ -167,12 +177,14 @@ export async function PUT(
                 return tx.transaction.update({
                     where: { id: bookingId },
                     data: {
-                        startDate:       start,
-                        endDate:         end,
+                        startDate:            start,
+                        endDate:              end,
                         totalDays,
                         totalPrice,
                         deposit,
-                        discountApplied: discount > 0 ? discount : null,
+                        discountApplied:      tierDiscount > 0 ? tierDiscount : null,
+                        eventDiscountApplied: eventEffect.totalDiscountPct > 0 ? eventEffect.totalDiscountPct : null,
+                        xpMultiplier:         eventEffect.xpMultiplier,
                     },
                 })
             }, { isolationLevel: "Serializable" })
